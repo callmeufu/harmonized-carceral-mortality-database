@@ -1,0 +1,138 @@
+---
+title: "MCI_DOC Join"
+output: html_notebook
+editor_options: 
+  chunk_output_type: console
+---
+•	First, for the MCI data, the cause_of_death has a key and several columns that need to be decoded using the codebook here
+o	Original source found here (the “BJS Mortality in Correctional Institutions State Prison Data” codebook)
+•	Then, combine the mci and state_docs (“docs” is dept of corrections) csvs into one
+
+
+```{r libraries}
+library(tidyverse)
+library(readxl)
+library(readr)
+library(lubridate)
+```
+
+
+```{r data}
+mci<-read.csv("mci_2016_2019_04062026.csv")
+doc<-read.csv("state_docs_excl_2016_to_2019_04082026.csv")
+```
+
+exploring mci data before assigning codebook values
+```{r codebook}
+#codebook vals
+#lname (dont have)
+#fname (dont have)
+#mname (dont have)
+
+#dobmon (have), dobday (have), dobyear (have)
+str(mci$date_of_birth)
+#need to mutate to have day, m, year, in different locations 
+mci$date_of_birth<-as.Date(mci$date_of_birth)
+str(mci$date_of_birth)
+mci <- mci %>%
+  mutate(
+    Dobmon = month(date_of_birth),
+    Dobday = day(date_of_birth),
+    Dobyear = year(date_of_birth)
+  )
+
+
+
+#state (have as state_abbrev)
+
+state_lookup <- c(
+  AL = 1, AK = 2, AZ = 3, AR = 4, CA = 5, CO = 6, CT = 7, DE = 8,
+  FL = 10, GA = 11, HI = 12, ID = 13, IL = 14, IN = 15, IA = 16,
+  KS = 17, KY = 18, LA = 19, ME = 20, MD = 21, MA = 22, MI = 23,
+  MN = 24, MS = 25, MO = 26, MT = 27, NE = 28, NV = 29, NH = 30,
+  NJ = 31, NM = 32, NY = 33, NC = 34, ND = 35, OH = 36, OK = 37,
+  OR = 38, PA = 39, RI = 40, SC = 41, SD = 42, TN = 43, TX = 44,
+  UT = 45, VT = 46, VA = 47, WA = 48, WV = 49, WI = 50, WY = 51
+)
+
+mci <- mci %>%
+  mutate(State = state_lookup[state_abbrev])
+
+#year (reporting year, not clear)
+
+#deathmon (have)
+str(mci$death_date_dt)
+#need to mutate to have day, m, year, in different locations 
+mci$death_date_dt<-as.Date(mci$death_date_dt)
+str(mci$death_date_dt)
+
+#deathday (have)
+
+
+#facname (have)
+mci<-mci%>%mutate(Facname=facility_name)
+
+#facloc (have)
+#does this include address? 
+
+#gender (have)
+str(mci$sex)
+mci%>%group_by(sex)%>%count()
+#have 3 -1 vals, in this dataset they call it sex, in the codebook they call it gender? 
+
+#race (have)
+mci%>%group_by(race)%>%count()
+
+mci<-mci%>%mutate(Race=(if_else(race== "Asian, non-Hispanic", 5,
+                          race== "Black, non-Hispanic", 2,
+                          race== "Hispanic or Latino", 3,
+                          race== "Native American", 4,
+                          race== "Other", 8,
+                          race== "Pacific Islander", 6,
+                          race== "White, non-Hispanic", 1, NA)))
+
+#hispanic (have)
+
+
+#races 1-6 (have)
+#but does this refer to being of mixed race? or is this just a binary place to hold racE? I think just a binary place to hold race 
+
+mci<-mci%>%mutate(Race1=(if_else(race=="White, non-Hispanic", 1, 0)))
+mci<-mci%>%mutate(Race2=(if_else(race=="Black, non-Hispanic", 1, 0)))
+mci<-mci%>%mutate(Race3=(if_else(race=="Native American", 1, 0)))
+mci<-mci%>%mutate(Race4=(if_else(race=="Asian, non-Hispanic", 1, 0)))
+mci<-mci%>%mutate(Race5=(if_else(race=="Pacific Islander", 1, 0)))
+mci<-mci%>%mutate(Race6=(if_else(race== "Other", 1, 0)))
+
+#oth race (kind of have)
+
+#admitmon (don't have)
+#admitday (dont have)
+#admityr(dont have)
+#curroff 1-5 (dont have)
+#mental stay (dont have)
+#death loc (dont have)
+#othloc (don't have)
+#evaluate (have)
+
+
+#cause (have)
+#illspec (have)
+#drugspec (have)
+#selfspec(have)
+#accspec(have)
+#suispec (have)
+#homispec (have)
+#otherspec (have)
+#medcond, medtrt 1-9 (dont have)
+#time (dont have)
+#place (have)
+#place_select (dont have)
+#insplace (dont have)
+#othplace (dont have)
+#forespec (dont have)
+#notes
+
+
+
+```
