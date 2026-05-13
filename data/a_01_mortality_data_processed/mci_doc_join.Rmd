@@ -193,4 +193,13 @@ combining DOC and MCI
 combined <- bind_rows(mci, doc)
 class(combined)
 
+write.csv(combined, "mci_doc_combined.csv")
+```
+
+exploring the combined category
+```{r combined}
+combined%>%group_by(cause_of_death)%>%count()
+
+#there are a lot
+
 ```
