@@ -22,8 +22,8 @@ mci<-read.csv("mci_2016_2019_04062026.csv")
 doc<-read.csv("state_docs_excl_2016_to_2019_04082026.csv")
 ```
 
-exploring mci data before assigning codebook values
-```{r codebook}
+exploring and cleaning mci
+```{r mci}
 #codebook vals
 #lname (dont have)
 #fname (dont have)
@@ -42,7 +42,6 @@ mci <- mci %>%
   )
 
 
-
 #state (have as state_abbrev)
 
 state_lookup <- c(
@@ -58,16 +57,17 @@ state_lookup <- c(
 mci <- mci %>%
   mutate(State = state_lookup[state_abbrev])
 
-#year (reporting year, not clear)
-
-#deathmon (have)
+#year (reporting year, ASSUMING this is death year), deathmon (have), deathday (have)
 str(mci$death_date_dt)
 #need to mutate to have day, m, year, in different locations 
 mci$death_date_dt<-as.Date(mci$death_date_dt)
 str(mci$death_date_dt)
-
-#deathday (have)
-
+mci <- mci %>%
+  mutate(
+    Deathmon = month(death_date_dt),
+    Deathday = day(death_date_dt),
+    Year = year(death_date_dt)
+  )
 
 #facname (have)
 mci<-mci%>%mutate(Facname=facility_name)
@@ -79,20 +79,27 @@ mci<-mci%>%mutate(Facname=facility_name)
 str(mci$sex)
 mci%>%group_by(sex)%>%count()
 #have 3 -1 vals, in this dataset they call it sex, in the codebook they call it gender? 
+mci<-mci%>%mutate(Gender=sex)
 
 #race (have)
 mci%>%group_by(race)%>%count()
 
-mci<-mci%>%mutate(Race=(if_else(race== "Asian, non-Hispanic", 5,
-                          race== "Black, non-Hispanic", 2,
-                          race== "Hispanic or Latino", 3,
-                          race== "Native American", 4,
-                          race== "Other", 8,
-                          race== "Pacific Islander", 6,
-                          race== "White, non-Hispanic", 1, NA)))
+mci <- mci %>%
+  mutate(
+    Race = case_when(
+      race == "White, non-Hispanic" ~ 1,
+      race == "Black, non-Hispanic" ~ 2,
+      race == "Hispanic or Latino" ~ 3,
+      race == "Native American" ~ 4,
+      race == "Asian, non-Hispanic" ~ 5,
+      race == "Pacific Islander" ~ 6,
+      race == "Other" ~ 8,
+      TRUE ~ NA_real_
+    )
+  )
 
 #hispanic (have)
-
+mci<-mci%>%mutate(Hispanic=(if_else(Race==3, 1, 0)))
 
 #races 1-6 (have)
 #but does this refer to being of mixed race? or is this just a binary place to hold racE? I think just a binary place to hold race 
@@ -104,8 +111,7 @@ mci<-mci%>%mutate(Race4=(if_else(race=="Asian, non-Hispanic", 1, 0)))
 mci<-mci%>%mutate(Race5=(if_else(race=="Pacific Islander", 1, 0)))
 mci<-mci%>%mutate(Race6=(if_else(race== "Other", 1, 0)))
 
-#oth race (kind of have)
-
+#oth race (dont have)
 #admitmon (don't have)
 #admitday (dont have)
 #admityr(dont have)
@@ -113,26 +119,78 @@ mci<-mci%>%mutate(Race6=(if_else(race== "Other", 1, 0)))
 #mental stay (dont have)
 #death loc (dont have)
 #othloc (don't have)
-#evaluate (have)
 
+#evaluate (have)
+mci%>%group_by(cause_of_death)%>%count()
+mci <- mci %>%
+  mutate(Evaluate = if_else(!is.na(cause_of_death) & cause_of_death != "", 1, NA_real_))
+mci%>%group_by(Evaluate)%>%count()
 
 #cause (have)
+mci%>%group_by(cause_of_death)%>%count()
+cod_lookup <- c(
+  "Illness (exclude AIDS-related deaths), specify illness"                                    = 1,
+  "Acquired Immune Deficiency Syndrome (AIDS-related)"                                        = 2,
+  "Accidental Alcohol/drug intoxication (specify type)"                                       = 3,
+  "Accidental injury to self, describe events"                                                = 4,
+  "Accidental injury by other (e.g. vehicular accident during transport) – describe events"   = 5,
+  "Suicide (e.g. hanging, knife/cutting instrument, intentional drug overdose) – describe events" = 6,
+  "Homicide (all years except 2011 and 2012)"                                                 = 7,
+  "Other causes, specify causes"                                                              = 8
+)
+
+mci <- mci %>%
+  mutate(Cause = cod_lookup[cause_of_death])
+mci%>%group_by(Cause)%>%count() #same 
+
 #illspec (have)
+mci<-mci%>%mutate(Illspec=illspec)
+
 #drugspec (have)
+mci<-mci%>%mutate(Drugspec=drugspec)
+
 #selfspec(have)
+mci<-mci%>%mutate(Selfspec=selfspec)
+
 #accspec(have)
+mci<-mci%>%mutate(Accspec=accspec)
+
 #suispec (have)
+mci<-mci%>%mutate(Suicspec=suicspec)
+
 #homispec (have)
+mci<-mci%>%mutate(Homispec=homispec)
+
 #otherspec (have)
+mci<-mci%>%mutate(Otherspec=otherspec)
+
 #medcond, medtrt 1-9 (dont have)
 #time (dont have)
 #place (have)
+mci<-mci%>%mutate(Place=place)
+
 #place_select (dont have)
 #insplace (dont have)
 #othplace (dont have)
 #forespec (dont have)
-#notes
+#notes (dont have)
 
+mci<-mci%>%mutate(is_mci=1)
+```
 
+exploring and cleaning doc 
+```{r doc}
+#actually has quite different COD names, this is why we would need the algorithm, I get it 
+
+doc$death_date_dt<-as.Date(doc$death_date_dt)
+doc$date_of_birth<-as.Date(doc$date_of_birth)
+doc<-doc%>%mutate(is_doc=1)
+```
+
+combining DOC and MCI
+```{r mcidocjoin}
+
+combined <- bind_rows(mci, doc)
+class(combined)
 
 ```
