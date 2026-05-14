@@ -176,6 +176,8 @@ mci<-mci%>%mutate(Place=place)
 #notes (dont have)
 
 mci<-mci%>%mutate(is_mci=1)
+
+mciaccident<-mci%>%filter(Cause== 3|Cause==4|Cause==5)
 ```
 
 exploring and cleaning doc 
@@ -185,6 +187,8 @@ exploring and cleaning doc
 doc$death_date_dt<-as.Date(doc$death_date_dt)
 doc$date_of_birth<-as.Date(doc$date_of_birth)
 doc<-doc%>%mutate(is_doc=1)
+
+docillness<-doc%>%filter()
 ```
 
 combining DOC and MCI
@@ -193,6 +197,7 @@ combining DOC and MCI
 combined <- bind_rows(mci, doc)
 class(combined)
 
+combined<-combined%>%select(-Dobmon, -Dobday, -Dobyear, -Deathmon, -Deathday, -Year, -Place, -State, -Facname, -Gender, - Race, -Hispanic, -Race1, -Race2, -Race3, -Race4, -Race5, -Race6, -Illspec, -Drugspec, -Selfspec, , Accspec, -Suicspec, -Homispec, -Otherspec)
 write.csv(combined, "mci_doc_combined.csv")
 ```
 
