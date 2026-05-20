@@ -1,0 +1,53 @@
+---
+title: "fitting DOC and MCI to COD"
+output: html_document
+date: "2026-05-18"
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries and data}
+library(tidyverse)
+library(readxl)
+library(writexl)
+template<-read_xlsx("COD Coding Input template.xlsx")
+combined<-read.csv("mci_doc_combined.csv")
+
+
+
+```
+
+fitting combined into template
+```{r fitting}
+template <- combined %>%
+  transmute(
+    CASE_NUMBER = X,
+    MANNER = cause_of_death,
+
+   CAUSE = coalesce(
+      illspec,
+      drugspec,
+      homispec,
+      suicspec,
+      selfspec,
+      accspec,
+      otherspec
+    )
+  )
+write_xlsx(template, "COD Coding Input template fixed.xlsx")
+```
+
+checking the output
+```{final cod}
+cod_output<-read_xlsx("final_cod_output.xlsx")
+
+cod_output%>%filter(is.na(MANNER) & is.na(CAUSE))%>%count()
+
+#1  7688
+
+summary(cod_output)
+```
