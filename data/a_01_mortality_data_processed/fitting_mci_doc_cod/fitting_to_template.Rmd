@@ -65,8 +65,8 @@ write_xlsx(template1, "COD Coding Input template_1.xlsx")
 ```
 
 checking the output
-```{final cod}
-cod_output1<-read_xlsx("final_cod_output.xlsx")
+```{final cod1}
+cod_output1<-read_xlsx("final_cod_output_1.xlsx")
 
 cod_output1%>%filter(is.na(MANNER) & is.na(CAUSE))%>%count()
 
@@ -114,6 +114,24 @@ template2 <- combined %>%
 write_xlsx(template2, "COD Coding Input template_2.xlsx")
 ```
 
+checking the output
+```{final cod1}
+cod_output2<-read_xlsx("final_cod_output_2.xlsx")
+
+cod_output2%>%filter(is.na(MANNER) & is.na(CAUSE))%>%count()
+
+#1  7688
+
+
+cod_output2%>%filter(is.na(MANNER))%>%count() #7688
+cod_output2%>%filter(is.na(CAUSE))%>%count() #7688 
+
+cod_output2%>%
+  filter(!if_any(all_of(cod_vars), ~ . == TRUE)) %>%
+  count()
+
+#33890 lots of missing 
+```
 
 now this section leaves the cause column blank and only focuses on manner 
 ```{r onlymanner}
@@ -123,8 +141,11 @@ template3 <- combined %>%
     CASE_NUMBER = X,
     MANNER = cause_of_death,
 )
-  
+
+template3<-template3%>%mutate(CAUSE= "")
 write_xlsx(template3, "COD Coding Input template_3.xlsx")
+
+#code does not work when cause is blank 
 ```
 
 
@@ -138,4 +159,6 @@ template4 <- combined %>%
    CAUSE = cause_of_death)
   
 write_xlsx(template4, "COD Coding Input template_2.xlsx")
+
+#code does not work when manner is blank 
 ```
