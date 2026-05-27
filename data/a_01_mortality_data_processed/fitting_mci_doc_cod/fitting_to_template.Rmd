@@ -64,6 +64,8 @@ template1 <- combined %>%
 write_xlsx(template1, "COD Coding Input template_1.xlsx")
 ```
 
+in this step, I processed through python 
+
 checking the output
 ```{final cod1}
 cod_output1<-read_xlsx("final_cod_output_1.xlsx")
