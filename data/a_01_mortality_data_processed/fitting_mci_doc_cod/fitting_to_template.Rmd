@@ -29,12 +29,28 @@ combined<-read.csv("mci_doc_combined.csv")
 
 looking at both cause_of_death and specific variables to see where missingness may lie
 ```{r counting}
-combined%>%filter(is.na(cause_of_death))%>%count() #none are NA, but looking at the df, there are blanks
+str(combined$cause_of_death) #character
+str(combined$illspec) #charaacter
+
+combined <- combined %>%mutate(across(where(is.character), ~ na_if(., "")))
+
+combined%>%filter(is.na(cause_of_death))%>%count() #7688
+
+
 
 combined %>%
-  filter(is.na(cause_of_death) | cause_of_death == "") %>%
-  count() #7688 are blank 
+  filter(
+    (is.na(illspec)   | illspec == "") &
+    (is.na(drugspec)  | drugspec == "") &
+    (is.na(selfspec)  | selfspec == "") &
+    (is.na(accspec)   | accspec == "") &
+    (is.na(suicspec)  | suicspec == "") &
+    (is.na(homispec)  | homispec == "") &
+    (is.na(otherspec) | otherspec == "")
+  ) %>%
+  count()
 
+#34487
 
 combined %>%
   filter(
@@ -67,6 +83,10 @@ template1 <- combined %>%
       otherspec
     )
   )
+
+template1 %>%summarise(n_missing = sum(is.na(MANNER) | MANNER == "")) #7688
+template1 %>%summarise(n_missing = sum(is.na(CAUSE) | CAUSE == "")) #34487 
+
 write_xlsx(template1, "COD Coding Input template_1.xlsx")
 ```
 
@@ -617,7 +637,7 @@ cod_output1%>%filter(is.na(MANNER) & is.na(CAUSE))%>%count()
 #1  7688
 
 cod_output1%>%filter(is.na(MANNER))%>%count() #7688
-cod_output1%>%filter(is.na(CAUSE))%>%count() #37144 rough
+cod_output1%>%filter(is.na(CAUSE))%>%count() #34487 
 
 cod_vars <- c(
   "ACCIDENT", "NATURAL", "HOMICIDE", "SUICIDE",
@@ -636,12 +656,55 @@ cod_vars <- c(
   "FINAL_ILLNESS_UNK", "FINAL_UNKNOWN",
   "FINAL_UNKNOWN_UNK"
 )
-
+manner_vars <- c(
+  "ACCIDENT", "NATURAL", "HOMICIDE", "SUICIDE",
+  "UNKNOWN", "PENDING"
+)
+cause_vars <- c(
+  "PRELIM_OD",
+  "PRELIM_HEAT", "PRELIM_COLD",
+  "PRELIM_OTHER_INJURY", "PRELIM_HOMICIDE",
+  "PRELIM_SUICIDE", "PRELIM_HEART",
+  "PRELIM_ILLNESS", "PRELIM_FIREARM",
+  "PRELIM_UNKNOWN", "FINAL_ACC_OD",
+  "FINAL_ALL_OD", "FINAL_HEAT",
+  "FINAL_HEAT_UNK", "FINAL_COLD",
+  "FINAL_COLD_UNK", "FINAL_OTHER_INJURY",
+  "FINAL_OTHER_INJURY_UNK", "FINAL_HOMICIDE",
+  "FINAL_SUICIDE", "FINAL_HEART",
+  "FINAL_HEART_UNK", "FINAL_ILLNESS",
+  "FINAL_ILLNESS_UNK", "FINAL_UNKNOWN",
+  "FINAL_UNKNOWN_UNK"
+)
 cod_output1%>%
   filter(!if_any(all_of(cod_vars), ~ . == TRUE)) %>%
-  count()
+  count()#25542
 
-#27373 lots of missing 
+cod_output1%>%group_by(MANUAL)%>%count()
+
+cod_output1 %>%
+  summarise(across(
+    all_of(manner_vars),
+    ~ sum(. == TRUE, na.rm = TRUE)
+  )) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "n_true"
+  ) %>%
+  arrange(desc(n_true))
+
+cod_output1 %>%
+  summarise(across(
+    all_of(cause_vars),
+    ~ sum(. == TRUE, na.rm = TRUE)
+  )) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "n_true"
+  ) %>%
+  arrange(desc(n_true))
 ```
 
 now this section matches to the template based on just cause_of_death in both columns (leaving specific info out)
@@ -1215,6 +1278,30 @@ cod_output2%>%
 #I don't understand why this brings back so much missingness if the kw key should be pulling from 
 
 #33890 lots of missing 
+
+cod_output2 %>%
+  summarise(across(
+    all_of(manner_vars),
+    ~ sum(. == TRUE, na.rm = TRUE)
+  )) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "n_true"
+  ) %>%
+  arrange(desc(n_true))
+
+cod_output2 %>%
+  summarise(across(
+    all_of(cause_vars),
+    ~ sum(. == TRUE, na.rm = TRUE)
+  )) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "n_true"
+  ) %>%
+  arrange(desc(n_true))
 ```
 
 now this section leaves the cause column blank and only focuses on manner. manner is coded using cause_of_death 
@@ -1463,13 +1550,37 @@ cod_output3%>%
 
 
 #37633 lots of missing 
+
+cod_output3 %>%
+  summarise(across(
+    all_of(manner_vars),
+    ~ sum(. == TRUE, na.rm = TRUE)
+  )) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "n_true"
+  ) %>%
+  arrange(desc(n_true))
+
+cod_output3 %>%
+  summarise(across(
+    all_of(cause_vars),
+    ~ sum(. == TRUE, na.rm = TRUE)
+  )) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "n_true"
+  ) %>%
+  arrange(desc(n_true))
 ```
 
 
 now this section leave the manner column blank and only focuses on cause. cause is coded as cause_of_death
 ```{r onlycause}
 
- template4 <- combined %>%
+template4 <- combined %>%
   transmute(
     CASE_NUMBER = X,
 
@@ -1694,7 +1805,7 @@ if __name__ == "__main__":
 ```
 
 
-checking the output after using template 3
+checking the output after using template 4
 ```{r finalcod2}
 cod_output4<-read_xlsx("final_cod_output_4.xlsx")
 
@@ -1707,9 +1818,34 @@ cod_output4%>%
   count()
 #since there is no manner, this does not work 
 
+cod_output4 %>%
+  summarise(across(
+    all_of(manner_vars),
+    ~ sum(. == TRUE, na.rm = TRUE)
+  )) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "n_true"
+  ) %>%
+  arrange(desc(n_true))
 
+cod_output4 %>%
+  summarise(across(
+    all_of(cause_vars),
+    ~ sum(. == TRUE, na.rm = TRUE)
+  )) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "n_true"
+  ) %>%
+  arrange(desc(n_true))
 ```
 
 
+exploring general trends
+```{r trends}
+```
 
 
