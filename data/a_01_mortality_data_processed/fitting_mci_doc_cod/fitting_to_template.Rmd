@@ -629,7 +629,7 @@ if __name__ == "__main__":
 ```
 
 checking the output of COD process 1 
-```{final cod1}
+```{r finalcod1}
 cod_output1<-read_xlsx("final_cod_output_1.xlsx")
 
 cod_output1%>%filter(is.na(MANNER) & is.na(CAUSE))%>%count()
@@ -705,6 +705,13 @@ cod_output1 %>%
     values_to = "n_true"
   ) %>%
   arrange(desc(n_true))
+
+
+tblnone1<-cod_output1%>%
+  filter(!if_any(all_of(cod_vars), ~ . == TRUE)) 
+
+tbl1has<-cod_output1%>%
+  filter(if_any(all_of(cod_vars), ~ . == TRUE)) 
 ```
 
 now this section matches to the template based on just cause_of_death in both columns (leaving specific info out)
