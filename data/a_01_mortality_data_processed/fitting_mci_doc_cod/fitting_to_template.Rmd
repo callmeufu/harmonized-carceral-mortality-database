@@ -710,8 +710,34 @@ cod_output1 %>%
 tblnone1<-cod_output1%>%
   filter(!if_any(all_of(cod_vars), ~ . == TRUE)) 
 
+
+tblnone1%>%group_by(MANNER)%>%count()
+tblnone1 %>% 
+  group_by(MANNER) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n))
+
+
+tblnone1 %>% 
+  group_by(CAUSE) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n))
+
 tbl1has<-cod_output1%>%
   filter(if_any(all_of(cod_vars), ~ . == TRUE)) 
+
+
+tbl1has %>% 
+  group_by(MANNER) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n))
+
+
+tbl1has %>% 
+  group_by(CAUSE) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n))
+
 ```
 
 now this section matches to the template based on just cause_of_death in both columns (leaving specific info out)
