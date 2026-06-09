@@ -3,3 +3,5 @@
 .RData
 .Ruserdata
 .positai
+.DS_Store
+data/a_01_mortality_data_processed/fitting_mci_doc__cod/test_combinations
