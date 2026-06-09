@@ -20,8 +20,8 @@ py_require("pandas")
 py_require("numpy")
 py_require("openpyxl")
 
-template<-read_xlsx("COD Coding Input template.xlsx")
-combined<-read.csv("mci_doc_combined.csv")
+template<-read_xlsx("fitting_mci_doc_cod/COD Coding Input template.xlsx")
+combined<-read.csv("fitting_mci_doc_cod/mci_doc_combined.csv")
 
 
 
@@ -66,7 +66,7 @@ combined %>%
 ```
 
 
-fitting combined into template 1
+fitting combined into template 1 where manner = COD general and cause= COD specific 
 ```{r fitting}
 template1 <- combined %>%
   transmute(
@@ -87,7 +87,7 @@ template1 <- combined %>%
 template1 %>%summarise(n_missing = sum(is.na(MANNER) | MANNER == "")) #7688
 template1 %>%summarise(n_missing = sum(is.na(CAUSE) | CAUSE == "")) #34487 
 
-write_xlsx(template1, "COD Coding Input template_1.xlsx")
+write_xlsx(template1, "fitting_mci_doc_cod/COD Coding Input template_1.xlsx")
 ```
 
 in this step, I processed template 1 through python 
@@ -100,7 +100,7 @@ import csv
 
 # Constants
 # MEO Entries
-excel_file_name = 'COD Coding Input template_1.xlsx'
+excel_file_name = 'fitting_mci_doc_cod/COD Coding Input template_1.xlsx'
 sub_sheet = 'DATA'
 # Keywords
 keywords_excel = 'final_kw_v1.xlsx'
@@ -423,10 +423,10 @@ import csv
 
 # Constants
 # MEO Entries
-excel_file_name = 'COD Coding Input template_1.xlsx'
+excel_file_name = 'fitting_mci_doc_cod/COD Coding Input template_1.xlsx'
 sub_sheet = 'Sheet1'
 # Keywords
-keywords_excel = 'final_kw_v1.xlsx'
+keywords_excel = 'fitting_mci_doc_cod/final_kw_v1.xlsx'
 kw_sub_sheet = 'keywords'
 
 
@@ -621,16 +621,16 @@ if __name__ == "__main__":
 
     # --- FORCED SAVE OUTSIDE OF ALL TRY/EXCEPT BLOCKS ---
     if df is not None:
-        output_file = 'final_cod_output_1.xlsx'
+        output_file = 'fitting_mci_doc_cod/final_cod_output_1.xlsx'
         df.to_excel(output_file, index=False)
-        print(f"\nSUCCESS: File forcefully saved to '{final_cod_output_1.xlsx}'!")
+        print(f"\nSUCCESS: File forcefully saved to '{fitting_mci_doc_cod/final_cod_output_1.xlsx}'!")
     else:
         print("\nERROR: DataFrame could not be created; file was not saved.")
 ```
 
 checking the output of COD process 1 
 ```{r finalcod1}
-cod_output1<-read_xlsx("final_cod_output_1.xlsx")
+cod_output1<-read_xlsx("fitting_mci_doc_cod/final_cod_output_1.xlsx")
 
 cod_output1%>%filter(is.na(MANNER) & is.na(CAUSE))%>%count()
 
@@ -739,6 +739,298 @@ tbl1has %>%
 
 ```
 
+this section runs template 1 through the edited keywords list
+
+```{python template1edited}
+import pandas as pd
+import numpy as np
+from numpy import isnan
+import math as math
+import csv
+
+# Constants
+# MEO Entries
+excel_file_name = 'fitting_mci_doc_cod/COD Coding Input template_1.xlsx'
+sub_sheet = 'Sheet1'
+# Keywords
+keywords_excel = 'fitting_mci_doc_cod/final_kw_v1.xlsx'
+kw_sub_sheet = 'keywords_additional' #this is the change
+
+# When ran
+if __name__ == "__main__":
+    
+    # Initialize df outside the blocks so it's visible globally for saving
+    df = None
+
+    # --- BLOCK 1: Coding Manners into T/F ---
+    try:    
+        # Read excel file using pandas
+        df = pd.read_excel(excel_file_name, sheet_name=sub_sheet, engine='openpyxl')
+        
+        # ACCOUNT FOR NAs: Fill missing values with empty text strings
+        df['MANNER'] = df['MANNER'].fillna("").astype(str)
+        df['CAUSE'] = df['CAUSE'].fillna("").astype(str)
+        
+        # Strip and lowercase Manner and Cause columns
+        df['MANNER'] = df['MANNER'].str.strip().str.lower()
+        df['CAUSE'] = df['CAUSE'].str.strip().str.lower()
+
+        # Initialize manner columns
+        df['ACCIDENT'] = False
+        df['NATURAL'] = False
+        df['HOMICIDE'] = False
+        df['SUICIDE'] = False
+        df['UNKNOWN'] = False
+        df['PENDING'] = False
+
+        # Check for where manner matches
+        df.loc[df['MANNER'] == 'accident', 'ACCIDENT'] = True
+        df.loc[df['MANNER'] == 'natural', 'NATURAL'] = True
+        df.loc[df['MANNER'] == 'homicide', 'HOMICIDE'] = True
+        df.loc[df['MANNER'] == 'suicide', 'SUICIDE'] = True
+        df.loc[df['MANNER'] == 'unknown', 'UNKNOWN'] = True
+        df.loc[df['MANNER'] == 'undetermined', 'UNKNOWN'] = True
+        df.loc[df['MANNER'] == 'pending', 'PENDING'] = True
+
+        print("--- MANNER MAPPING PREVIEW ---")
+        print(df[['MANNER','ACCIDENT','NATURAL','HOMICIDE','SUICIDE','UNKNOWN']].head())  
+    except Exception as e:
+        print(f"Exception in Manner block: {e}")
+
+    # --- BLOCK 2: Keywords list building ---
+    try:
+        # Read codebook and convert any blank structure cells to NaNs for clean dropping
+        kw_df = pd.read_excel(keywords_excel, sheet_name='keywords_additional', engine='openpyxl')
+
+        # Overdose keywords list
+        od_keywords = kw_df['OVERDOSE KEYWORDS'].dropna().astype(str).str.strip().tolist()
+        od_keywords = [x for x in od_keywords if x != "" and x != 'nan']
+
+        # Heat keywords list
+        heat_keywords = kw_df['HEAT KEYWORDS'].dropna().astype(str).str.strip().tolist()
+        heat_keywords = [x for x in heat_keywords if x != "" and x != 'nan']
+       
+        # Cold keywords list
+        cold_keywords = kw_df['COLD KEYWORDS'].dropna().astype(str).str.strip().tolist()
+        cold_keywords = [x for x in cold_keywords if x != "" and x != 'nan']
+
+        # Injury keywords list
+        inj_keywords = kw_df['INJURY KEYWORDS'].dropna().astype(str).str.strip().tolist()
+        inj_keywords = [x for x in inj_keywords if x != "" and x != 'nan']       
+
+        # Heart keywords list   
+        heart_keywords = kw_df['HEART KEYWORDS'].dropna().astype(str).str.strip().tolist()
+        heart_keywords = [x for x in heart_keywords if x != "" and x != 'nan']
+
+        # Illness keywords list   
+        illness_keywords = kw_df['ILLNESS KEYWORDS'].dropna().astype(str).str.strip().tolist()
+        illness_keywords = [x for x in illness_keywords if x != "" and x != 'nan']
+
+        # Undetermined keywords list   
+        undetermined_keywords = kw_df['UNDETERMINED'].dropna().astype(str).str.strip().tolist()
+        undetermined_keywords = [x for x in undetermined_keywords if x != "" and x != 'nan']
+
+        # Firearm keywords list   
+        firearm_keywords = kw_df['FIREARM'].dropna().astype(str).str.strip().tolist()
+        firearm_keywords = [x for x in firearm_keywords if x != "" and x != 'nan']
+        
+        print("\n--- KEYWORDS LOADED SUCCESSFULLY ---")
+        print(f"Firearm keywords found: {len(firearm_keywords)}")
+
+    except Exception as e:
+        print(f"Exception in Keywords block: {e}")
+
+   # --- BLOCK 3: Preliminary cause assignments ---
+    try:
+        # ACCOUNT FOR NAs: Re-verify that cause fields contain text, not missing values
+        df['CAUSE'] = df['CAUSE'].fillna("").astype(str)
+        df['CAUSE'] = df['CAUSE'].str.strip().str.upper()
+        
+        # Initialize preliminary cause columns
+        df['PRELIM_OD'] = False
+        df['PRELIM_HEAT'] = False
+        df['PRELIM_COLD'] = False
+        df['PRELIM_OTHER_INJURY'] = False
+        df['PRELIM_HOMICIDE'] = False
+        df['PRELIM_SUICIDE'] = False
+        df['PRELIM_HEART'] = False
+        df['PRELIM_ILLNESS'] = False
+        df['PRELIM_FIREARM'] = False
+        df['PRELIM_UNKNOWN'] = False
+
+        # Overdose
+        for kw in od_keywords:
+            if pd.isna(kw) or kw == "": continue
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_OD'] = True
+
+        # Heat
+        for kw in heat_keywords:
+            if pd.isna(kw) or kw == "": continue
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_HEAT'] = True
+            
+        # Cold
+        for kw in cold_keywords:
+            if pd.isna(kw) or kw == "": continue
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_COLD'] = True
+
+        # Other Injury
+        for kw in inj_keywords:
+            if pd.isna(kw) or kw == "": continue
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_OTHER_INJURY'] = True
+
+        # Homicide, only need to check if the manner = homicide
+        df.loc[df['MANNER'] == 'homicide', 'PRELIM_HOMICIDE'] = True
+
+        # Suicide, only need to check if the manner = suicide
+        df.loc[df['MANNER'] == 'suicide', 'PRELIM_SUICIDE'] = True
+
+        # Heart
+        for kw in heart_keywords:
+            if pd.isna(kw) or kw == "": continue
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_HEART'] = True
+
+        # Illness
+        for kw in illness_keywords:
+            if pd.isna(kw) or kw == "": continue
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_ILLNESS'] = True
+
+        # Firearm
+        for kw in firearm_keywords:
+            if pd.isna(kw) or kw == "": continue
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_FIREARM'] = True
+
+        # Unknown
+        for kw in undetermined_keywords:
+            if pd.isna(kw) or kw == "": continue
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_UNKNOWN'] = True
+            
+        print("\n--- PRELIMINARY COD ASSIGNMENTS COMPLETE ---")
+
+    except Exception as e:
+        print(f"Exception in Cause Assignment block: {e}")
+
+    # --- BLOCK 4: Applying logic and context of Manner for Final Causes ---
+    try:
+        # Initialize final columns
+        df['FINAL_ACC_OD'] = False
+        df['FINAL_ALL_OD'] = False
+        df['FINAL_HEAT'] = False
+        df['FINAL_HEAT_UNK'] = False
+        df['FINAL_COLD'] = False
+        df['FINAL_COLD_UNK'] = False
+        df['FINAL_OTHER_INJURY'] = False
+        df['FINAL_OTHER_INJURY_UNK'] = False
+        df['FINAL_HOMICIDE'] = False
+        df['FINAL_SUICIDE'] = False
+        df['FINAL_HEART'] = False
+        df['FINAL_HEART_UNK'] = False
+        df['FINAL_ILLNESS'] = False
+        df['FINAL_ILLNESS_UNK'] = False
+        df['FINAL_UNKNOWN'] = False
+        df['FINAL_UNKNOWN_UNK'] = False
+        df['MANUAL'] = False
+
+        # Final UNINTENTIONAL overdose (only includes only overdoses with accidental manner)
+        df.loc[df['ACCIDENT'] & df['PRELIM_OD'], 'FINAL_ACC_OD'] = True
+
+        # Final ALL Overdose count, includes overdoses of accidental, homicidal, suicidal, and undetermined manner
+        # Specifically excludes natural manner deaths as Overdose is not a natural death
+        df.loc[~df['NATURAL'] & df['PRELIM_OD'], 'FINAL_ALL_OD'] = True
+
+        # Final heat (accident only)
+        df.loc[df['ACCIDENT'] & df['PRELIM_HEAT'], 'FINAL_HEAT'] = True
+        
+        print("\n--- FINAL CLASSIFICATION COMPLETE ---")
+
+    except Exception as e:
+        print(f"Exception in Final Logic block: {e}")
+
+    # --- FORCED SAVE OUTSIDE OF ALL TRY/EXCEPT BLOCKS ---
+    if df is not None:
+        output_file = 'fitting_mci_doc_cod/final_cod_output_1_edited.xlsx'
+        df.to_excel(output_file, index=False)
+        print(f"\nSUCCESS: File forcefully saved to '{fitting_mci_doc_cod/final_cod_output_1_edited.xlsx}'!")
+    else:
+        print("\nERROR: DataFrame could not be created; file was not saved.")
+```
+
+checking the output of COD process 1 
+```{r finalcod1}
+cod_output1_edited<-read_xlsx("fitting_mci_doc_cod/final_cod_output_1_edited.xlsx")
+
+cod_output1_edited%>%filter(is.na(MANNER) & is.na(CAUSE))%>%count()
+
+#1  7688
+
+cod_output1_edited%>%filter(is.na(MANNER))%>%count() #7688
+cod_output1_edited%>%filter(is.na(CAUSE))%>%count() #34487 
+
+
+cod_output1_edited%>%
+  filter(!if_any(all_of(cod_vars), ~ . == TRUE)) %>%
+  count()#23637 
+
+cod_output1_edited%>%group_by(MANUAL)%>%count()
+
+cod_output1_edited %>%
+  summarise(across(
+    all_of(manner_vars),
+    ~ sum(. == TRUE, na.rm = TRUE)
+  )) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "n_true"
+  ) %>%
+  arrange(desc(n_true))
+
+cod_output1_edited %>%
+  summarise(across(
+    all_of(cause_vars),
+    ~ sum(. == TRUE, na.rm = TRUE)
+  )) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "n_true"
+  ) %>%
+  arrange(desc(n_true))
+
+
+tblnone1_edited<-cod_output1_edited%>%
+  filter(!if_any(all_of(cod_vars), ~ . == TRUE)) 
+
+
+tblnone1_edited%>%group_by(MANNER)%>%count()
+tblnone1_edited %>% 
+  group_by(MANNER) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n))
+
+tblnone1desc_edited<-tblnone1_edited %>% 
+  group_by(CAUSE) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n))
+
+tbl1has_edited<-cod_output1_edited%>%
+  filter(if_any(all_of(cod_vars), ~ . == TRUE)) 
+
+
+tbl1has_edited %>% 
+  group_by(MANNER) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n))
+
+
+tbl1has_edited %>% 
+  group_by(CAUSE) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n))
+
+```
+
+
+
 now this section matches to the template based on just cause_of_death in both columns (leaving specific info out)
 
 ```{r causeboth}
@@ -749,7 +1041,7 @@ template2 <- combined %>%
 
    CAUSE = cause_of_death)
   
-write_xlsx(template2, "test_combinations/COD Coding Input template_2.xlsx")
+write_xlsx(template2, "fitting_mci_doc_cod/test_combinations/COD Coding Input template_2.xlsx")
 ```
 
 in this step, I ran through the python script 
@@ -762,7 +1054,7 @@ import csv
 
 # Constants
 # MEO Entries
-excel_file_name = 'test_combinations/COD Coding Input template_2.xlsx'
+excel_file_name = 'fitting_mci_doc_cod/test_combinations/COD Coding Input template_2.xlsx'
 sub_sheet = 'DATA'
 # Keywords
 keywords_excel = 'final_kw_v1.xlsx'
@@ -1085,7 +1377,7 @@ import csv
 
 # Constants
 # MEO Entries
-excel_file_name = 'test_combinations/COD Coding Input template_2.xlsx'
+excel_file_name = 'fitting_mci_doc_cod/test_combinations/COD Coding Input template_2.xlsx'
 sub_sheet = 'Sheet1'
 # Keywords
 keywords_excel = 'final_kw_v1.xlsx'
@@ -1283,9 +1575,9 @@ if __name__ == "__main__":
 
     # --- FORCED SAVE OUTSIDE OF ALL TRY/EXCEPT BLOCKS ---
     if df is not None:
-        output_file = 'test_combinations/final_cod_output_2.xlsx'
+        output_file = 'fitting_mci_doc_cod/test_combinations/final_cod_output_2.xlsx'
         df.to_excel(output_file, index=False)
-        print(f"\nSUCCESS: File forcefully saved to '{test_combinations/final_cod_output_2.xlsx}'!")
+        print(f"\nSUCCESS: File forcefully saved to '{fitting_mci_doc_cod/test_combinations/final_cod_output_2.xlsx}'!")
     else:
         print("\nERROR: DataFrame could not be created; file was not saved.")
 ```
@@ -1293,7 +1585,7 @@ if __name__ == "__main__":
 
 checking the output after using template 2
 ```{r finalcod2}
-cod_output2<-read_xlsx("test_combinations/final_cod_output_2.xlsx")
+cod_output2<-read_xlsx("fitting_mci_doc_cod/test_combinations/final_cod_output_2.xlsx")
 
 cod_output2%>%filter(is.na(MANNER) & is.na(CAUSE))%>%count()
 
@@ -1345,7 +1637,7 @@ template3 <- combined %>%
 )
 
 template3<-template3%>%mutate(CAUSE= "")
-write_xlsx(template3, "test_combinations/COD Coding Input template_3.xlsx")
+write_xlsx(template3, "fitting_mci_doc_cod/test_combinations/COD Coding Input template_3.xlsx")
 ```
 
 processing template 3 with python code 
@@ -1358,7 +1650,7 @@ import csv
 
 # Constants
 # MEO Entries
-excel_file_name = 'test_combinations/COD Coding Input template_3.xlsx'
+excel_file_name = 'fitting_mci_doc_cod/test_combinations/COD Coding Input template_3.xlsx'
 sub_sheet = 'Sheet1'
 # Keywords
 keywords_excel = 'final_kw_v1.xlsx'
@@ -1556,9 +1848,9 @@ if __name__ == "__main__":
 
     # --- FORCED SAVE OUTSIDE OF ALL TRY/EXCEPT BLOCKS ---
     if df is not None:
-        output_file = 'test_combinations/final_cod_output_3.xlsx'
+        output_file = 'fitting_mci_doc_cod/test_combinations/final_cod_output_3.xlsx'
         df.to_excel(output_file, index=False)
-        print(f"\nSUCCESS: File forcefully saved to '{test_combinations/final_cod_output_3.xlsx}'!")
+        print(f"\nSUCCESS: File forcefully saved to '{fitting_mci_doc_cod/test_combinations/final_cod_output_3.xlsx}'!")
     else:
         print("\nERROR: DataFrame could not be created; file was not saved.")
 ```
@@ -1566,7 +1858,7 @@ if __name__ == "__main__":
 
 checking the output after using template 3
 ```{r finalcod2}
-cod_output3<-read_xlsx("test_combinations/final_cod_output_3.xlsx")
+cod_output3<-read_xlsx("fitting_mci_doc_cod/test_combinations/final_cod_output_3.xlsx")
 
 cod_output3%>%filter(is.na(MANNER) & is.na(CAUSE))%>%count()
 
@@ -1618,7 +1910,7 @@ template4 <- combined %>%
 
    CAUSE = cause_of_death)
   
-write_xlsx(template4, "test_combinations/COD Coding Input template_4.xlsx")
+write_xlsx(template4, "fitting_mci_doc_cod/test_combinations/COD Coding Input template_4.xlsx")
 ```
 
 in this step, I processed template 4 through python 
@@ -1631,7 +1923,7 @@ import csv
 
 # Constants
 # MEO Entries
-excel_file_name = 'test_combinations/COD Coding Input template_4.xlsx'
+excel_file_name = 'fitting_mci_doc_cod/test_combinations/COD Coding Input template_4.xlsx'
 sub_sheet = 'Sheet1'
 # Keywords
 keywords_excel = 'final_kw_v1.xlsx'
@@ -1829,9 +2121,9 @@ if __name__ == "__main__":
 
     # --- FORCED SAVE OUTSIDE OF ALL TRY/EXCEPT BLOCKS ---
     if df is not None:
-        output_file = 'test_combinations/final_cod_output_4.xlsx'
+        output_file = 'fitting_mci_doc_cod/test_combinations/final_cod_output_4.xlsx'
         df.to_excel(output_file, index=False)
-        print(f"\nSUCCESS: File forcefully saved to '{test_combinations/final_cod_output_4.xlsx}'!")
+        print(f"\nSUCCESS: File forcefully saved to '{fitting_mci_doc_cod/test_combinations/final_cod_output_4.xlsx}'!")
     else:
         print("\nERROR: DataFrame could not be created; file was not saved.")
 ```
@@ -1839,7 +2131,7 @@ if __name__ == "__main__":
 
 checking the output after using template 4
 ```{r finalcod2}
-cod_output4<-read_xlsx("final_cod_output_4.xlsx")
+cod_output4<-read_xlsx("fitting_mci_doc_cod/test_combinations/final_cod_output_4.xlsx")
 
 cod_output4%>%filter(is.na(MANNER) & is.na(CAUSE))%>%count() #there is no manner 
 cod_output4%>%filter(is.na(MANNER))%>%count() #there is no manner 
