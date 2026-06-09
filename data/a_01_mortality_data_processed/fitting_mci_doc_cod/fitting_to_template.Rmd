@@ -954,7 +954,7 @@ if __name__ == "__main__":
         print("\nERROR: DataFrame could not be created; file was not saved.")
 ```
 
-checking the output of COD process 1 
+checking the output of COD process 1 with edited keywords 
 ```{r finalcod1}
 cod_output1_edited<-read_xlsx("fitting_mci_doc_cod/final_cod_output_1_edited.xlsx")
 
@@ -1030,9 +1030,8 @@ tbl1has_edited %>%
 ```
 
 
-
+#moving into more exploratory analysis
 now this section matches to the template based on just cause_of_death in both columns (leaving specific info out)
-
 ```{r causeboth}
 template2 <- combined %>%
   transmute(
@@ -1855,7 +1854,6 @@ if __name__ == "__main__":
         print("\nERROR: DataFrame could not be created; file was not saved.")
 ```
 
-
 checking the output after using template 3
 ```{r finalcod2}
 cod_output3<-read_xlsx("fitting_mci_doc_cod/test_combinations/final_cod_output_3.xlsx")
@@ -1899,7 +1897,6 @@ cod_output3 %>%
   ) %>%
   arrange(desc(n_true))
 ```
-
 
 now this section leave the manner column blank and only focuses on cause. cause is coded as cause_of_death
 ```{r onlycause}
@@ -2127,7 +2124,6 @@ if __name__ == "__main__":
     else:
         print("\nERROR: DataFrame could not be created; file was not saved.")
 ```
-
 
 checking the output after using template 4
 ```{r finalcod2}
