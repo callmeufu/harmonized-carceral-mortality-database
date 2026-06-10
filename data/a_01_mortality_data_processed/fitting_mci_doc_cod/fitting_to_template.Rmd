@@ -743,7 +743,6 @@ cod_output1 %>%
 tblnone1<-cod_output1%>%
   filter(!if_any(all_of(cod_vars), ~ . == TRUE)) 
 
-
 tblnone1%>%group_by(MANNER)%>%count()
 tblnone1 %>% 
   group_by(MANNER) %>% 
@@ -1009,7 +1008,7 @@ cod_output1_edited%>%filter(is.na(CAUSE))%>%count() #34487
 
 cod_output1_edited%>%
   filter(!if_any(all_of(cod_vars), ~ . == TRUE)) %>%
-  count()#23637 
+  count()#23903
 
 cod_output1_edited%>%group_by(MANUAL)%>%count()
 
@@ -1068,6 +1067,8 @@ tbl1has_edited %>%
   summarise(n = n()) %>% 
   arrange(desc(n))
 
+
+cod_output1%>%group_by(MANUAL)%>%count()
 ```
 
 
