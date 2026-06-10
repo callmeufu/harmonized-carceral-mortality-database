@@ -354,7 +354,27 @@ if __name__ == "__main__":
         df.loc[df['UNKNOWN'] & ~df['PRELIM_OD'] & ~df['FINAL_OTHER_INJURY_UNK'] & ~df['FINAL_HEART_UNK'] & ~df['FINAL_ILLNESS_UNK'], 'FINAL_UNKNOWN_UNK'] = True
 
         #For manual output
-        df.loc[~df['FINAL_OD'] & ~df['FINAL_HEAT'] & ~df['FINAL_COLD'] & ~df['FINAL_OTHER_INJURY'] & ~df['FINAL_HOMICIDE'] & ~df['FINAL_SUICIDE'] & ~df['FINAL_HEART'] & ~df['FINAL_ILLNESS'] & ~df['FINAL_UNKNOWN'], 'MANUAL'] = True
+df.loc[
+    ~df['FINAL_ACC_OD'] &
+    ~df['FINAL_ALL_OD'] &
+    ~df['FINAL_HEAT'] &
+    ~df['FINAL_HEAT_UNK'] &
+    ~df['FINAL_COLD'] &
+    ~df['FINAL_COLD_UNK'] &
+    ~df['FINAL_OTHER_INJURY'] &
+    ~df['FINAL_OTHER_INJURY_UNK'] &
+    ~df['FINAL_HOMICIDE'] &
+    ~df['FINAL_SUICIDE'] &
+    ~df['FINAL_HEART'] &
+    ~df['FINAL_HEART_UNK'] &
+    ~df['FINAL_ILLNESS'] &
+    ~df['FINAL_ILLNESS_UNK'] &
+    ~df['FINAL_UNKNOWN'] &
+    ~df['FINAL_UNKNOWN_UNK'],
+    'MANUAL'
+] = True      
+      
+      
         #df filtered for manual output
         manaual_df = df[df['MANUAL'] == True ]
         print(manaual_df)
@@ -422,34 +442,23 @@ import math as math
 import csv
 
 # Constants
-# MEO Entries
 excel_file_name = 'fitting_mci_doc_cod/COD Coding Input template_1.xlsx'
 sub_sheet = 'Sheet1'
-# Keywords
 keywords_excel = 'fitting_mci_doc_cod/final_kw_v1.xlsx'
 kw_sub_sheet = 'keywords'
 
 
-# When ran
 if __name__ == "__main__":
-    
-    # Initialize df outside the blocks so it's visible globally for saving
-    df = None
 
-    # --- BLOCK 1: Coding Manners into T/F ---
-    try:    
-        # Read excel file using pandas
+    # =========================
+    # BLOCK 1
+    # =========================
+    try:
         df = pd.read_excel(excel_file_name, sheet_name=sub_sheet, engine='openpyxl')
-        
-        # ACCOUNT FOR NAs: Fill missing values with empty text strings
-        df['MANNER'] = df['MANNER'].fillna("").astype(str)
-        df['CAUSE'] = df['CAUSE'].fillna("").astype(str)
-        
-        # Strip and lowercase Manner and Cause columns
-        df['MANNER'] = df['MANNER'].str.strip().str.lower()
-        df['CAUSE'] = df['CAUSE'].str.strip().str.lower()
 
-        # Initialize manner columns
+        df['MANNER'] = df['MANNER'].fillna("").str.strip().str.lower()
+        df['CAUSE'] = df['CAUSE'].fillna("").str.strip().str.lower()
+
         df['ACCIDENT'] = False
         df['NATURAL'] = False
         df['HOMICIDE'] = False
@@ -457,7 +466,6 @@ if __name__ == "__main__":
         df['UNKNOWN'] = False
         df['PENDING'] = False
 
-        # Check for where manner matches
         df.loc[df['MANNER'] == 'accident', 'ACCIDENT'] = True
         df.loc[df['MANNER'] == 'natural', 'NATURAL'] = True
         df.loc[df['MANNER'] == 'homicide', 'HOMICIDE'] = True
@@ -466,61 +474,35 @@ if __name__ == "__main__":
         df.loc[df['MANNER'] == 'undetermined', 'UNKNOWN'] = True
         df.loc[df['MANNER'] == 'pending', 'PENDING'] = True
 
-        print("--- MANNER MAPPING PREVIEW ---")
-        print(df[['MANNER','ACCIDENT','NATURAL','HOMICIDE','SUICIDE','UNKNOWN']].head())  
-    except Exception as e:
-        print(f"Exception in Manner block: {e}")
+    except:
+        print('exception')
 
-    # --- BLOCK 2: Keywords list building ---
+
+    # =========================
+    # BLOCK 2 (unchanged)
+    # =========================
     try:
-        # Read codebook and convert any blank structure cells to NaNs for clean dropping
         kw_df = pd.read_excel(keywords_excel, sheet_name='keywords', engine='openpyxl')
 
-        # Overdose keywords list
-        od_keywords = kw_df['OVERDOSE KEYWORDS'].dropna().astype(str).str.strip().tolist()
-        od_keywords = [x for x in od_keywords if x != "" and x != 'nan']
+        od_keywords = kw_df['OVERDOSE KEYWORDS'].dropna().astype(str).tolist()
+        heat_keywords = kw_df['HEAT KEYWORDS'].dropna().astype(str).tolist()
+        cold_keywords = kw_df['COLD KEYWORDS'].dropna().astype(str).tolist()
+        inj_keywords = kw_df['INJURY KEYWORDS'].dropna().astype(str).tolist()
+        heart_keywords = kw_df['HEART KEYWORDS'].dropna().astype(str).tolist()
+        illness_keywords = kw_df['ILLNESS KEYWORDS'].dropna().astype(str).tolist()
+        undetermined_keywords = kw_df['UNDETERMINED'].dropna().astype(str).tolist()
+        firearm_keywords = kw_df['FIREARM'].dropna().astype(str).tolist()
 
-        # Heat keywords list
-        heat_keywords = kw_df['HEAT KEYWORDS'].dropna().astype(str).str.strip().tolist()
-        heat_keywords = [x for x in heat_keywords if x != "" and x != 'nan']
-       
-        # Cold keywords list
-        cold_keywords = kw_df['COLD KEYWORDS'].dropna().astype(str).str.strip().tolist()
-        cold_keywords = [x for x in cold_keywords if x != "" and x != 'nan']
+    except:
+        print('exception')
 
-        # Injury keywords list
-        inj_keywords = kw_df['INJURY KEYWORDS'].dropna().astype(str).str.strip().tolist()
-        inj_keywords = [x for x in inj_keywords if x != "" and x != 'nan']       
 
-        # Heart keywords list   
-        heart_keywords = kw_df['HEART KEYWORDS'].dropna().astype(str).str.strip().tolist()
-        heart_keywords = [x for x in heart_keywords if x != "" and x != 'nan']
-
-        # Illness keywords list   
-        illness_keywords = kw_df['ILLNESS KEYWORDS'].dropna().astype(str).str.strip().tolist()
-        illness_keywords = [x for x in illness_keywords if x != "" and x != 'nan']
-
-        # Undetermined keywords list   
-        undetermined_keywords = kw_df['UNDETERMINED'].dropna().astype(str).str.strip().tolist()
-        undetermined_keywords = [x for x in undetermined_keywords if x != "" and x != 'nan']
-
-        # Firearm keywords list   
-        firearm_keywords = kw_df['FIREARM'].dropna().astype(str).str.strip().tolist()
-        firearm_keywords = [x for x in firearm_keywords if x != "" and x != 'nan']
-        
-        print("\n--- KEYWORDS LOADED SUCCESSFULLY ---")
-        print(f"Firearm keywords found: {len(firearm_keywords)}")
-
-    except Exception as e:
-        print(f"Exception in Keywords block: {e}")
-
-   # --- BLOCK 3: Preliminary cause assignments ---
+    # =========================
+    # BLOCK 3
+    # =========================
     try:
-        # ACCOUNT FOR NAs: Re-verify that cause fields contain text, not missing values
-        df['CAUSE'] = df['CAUSE'].fillna("").astype(str)
-        df['CAUSE'] = df['CAUSE'].str.strip().str.upper()
-        
-        # Initialize preliminary cause columns
+        df['CAUSE'] = df['CAUSE'].fillna("").str.upper()
+
         df['PRELIM_OD'] = False
         df['PRELIM_HEAT'] = False
         df['PRELIM_COLD'] = False
@@ -532,60 +514,42 @@ if __name__ == "__main__":
         df['PRELIM_FIREARM'] = False
         df['PRELIM_UNKNOWN'] = False
 
-        # Overdose
         for kw in od_keywords:
-            if pd.isna(kw) or kw == "": continue
             df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_OD'] = True
 
-        # Heat
         for kw in heat_keywords:
-            if pd.isna(kw) or kw == "": continue
             df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_HEAT'] = True
-            
-        # Cold
+
         for kw in cold_keywords:
-            if pd.isna(kw) or kw == "": continue
             df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_COLD'] = True
 
-        # Other Injury
         for kw in inj_keywords:
-            if pd.isna(kw) or kw == "": continue
             df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_OTHER_INJURY'] = True
 
-        # Homicide, only need to check if the manner = homicide
         df.loc[df['MANNER'] == 'homicide', 'PRELIM_HOMICIDE'] = True
-
-        # Suicide, only need to check if the manner = suicide
         df.loc[df['MANNER'] == 'suicide', 'PRELIM_SUICIDE'] = True
 
-        # Heart
         for kw in heart_keywords:
-            if pd.isna(kw) or kw == "": continue
             df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_HEART'] = True
 
-        # Illness
         for kw in illness_keywords:
-            if pd.isna(kw) or kw == "": continue
             df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_ILLNESS'] = True
 
-        # Firearm
         for kw in firearm_keywords:
-            if pd.isna(kw) or kw == "": continue
             df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_FIREARM'] = True
 
-        # Unknown
         for kw in undetermined_keywords:
-            if pd.isna(kw) or kw == "": continue
             df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_UNKNOWN'] = True
-            
-        print("\n--- PRELIMINARY COD ASSIGNMENTS COMPLETE ---")
 
-    except Exception as e:
-        print(f"Exception in Cause Assignment block: {e}")
+    except:
+        print('exception')
 
-    # --- BLOCK 4: Applying logic and context of Manner for Final Causes ---
+
+    # =========================
+    # BLOCK 4 (FIXED MANUAL ONLY)
+    # =========================
     try:
-        # Initialize final columns
+
         df['FINAL_ACC_OD'] = False
         df['FINAL_ALL_OD'] = False
         df['FINAL_HEAT'] = False
@@ -604,28 +568,97 @@ if __name__ == "__main__":
         df['FINAL_UNKNOWN_UNK'] = False
         df['MANUAL'] = False
 
-        # Final UNINTENTIONAL overdose (only includes only overdoses with accidental manner)
-        df.loc[df['ACCIDENT'] & df['PRELIM_OD'], 'FINAL_ACC_OD'] = True
+        accident = df['ACCIDENT'].fillna(False)
+        natural = df['NATURAL'].fillna(False)
+        unknown = df['UNKNOWN'].fillna(False)
 
-        # Final ALL Overdose count, includes overdoses of accidental, homicidal, suicidal, and undetermined manner
-        # Specifically excludes natural manner deaths as Overdose is not a natural death
-        df.loc[~df['NATURAL'] & df['PRELIM_OD'], 'FINAL_ALL_OD'] = True
+        prelim_od = df['PRELIM_OD'].fillna(False)
+        prelim_heat = df['PRELIM_HEAT'].fillna(False)
+        prelim_cold = df['PRELIM_COLD'].fillna(False)
+        prelim_other = df['PRELIM_OTHER_INJURY'].fillna(False)
+        prelim_heart = df['PRELIM_HEART'].fillna(False)
+        prelim_illness = df['PRELIM_ILLNESS'].fillna(False)
+        prelim_homicide = df['PRELIM_HOMICIDE'].fillna(False)
+        prelim_suicide = df['PRELIM_SUICIDE'].fillna(False)
 
-        # Final heat (accident only)
-        df.loc[df['ACCIDENT'] & df['PRELIM_HEAT'], 'FINAL_HEAT'] = True
-        
-        print("\n--- FINAL CLASSIFICATION COMPLETE ---")
+        df.loc[accident & prelim_od, 'FINAL_ACC_OD'] = True
+        df.loc[~natural & prelim_od, 'FINAL_ALL_OD'] = True
+
+        df.loc[accident & prelim_heat, 'FINAL_HEAT'] = True
+        df.loc[(accident | unknown) & prelim_heat, 'FINAL_HEAT_UNK'] = True
+
+        df.loc[accident & prelim_cold, 'FINAL_COLD'] = True
+        df.loc[(accident | unknown) & prelim_cold, 'FINAL_COLD_UNK'] = True
+
+        df.loc[accident & prelim_other, 'FINAL_OTHER_INJURY'] = True
+        df.loc[(accident | unknown) & prelim_other, 'FINAL_OTHER_INJURY_UNK'] = True
+
+        df.loc[prelim_homicide, 'FINAL_HOMICIDE'] = True
+        df.loc[prelim_suicide, 'FINAL_SUICIDE'] = True
+
+        df.loc[natural & prelim_heart, 'FINAL_HEART'] = True
+        df.loc[(natural | unknown) & prelim_heart, 'FINAL_HEART_UNK'] = True
+
+        df.loc[natural & prelim_illness & ~prelim_heart, 'FINAL_ILLNESS'] = True
+        df.loc[(natural | unknown) & prelim_illness & ~prelim_heart, 'FINAL_ILLNESS_UNK'] = True
+
+        df.loc[unknown, 'FINAL_UNKNOWN'] = True
+
+        df.loc[
+            unknown &
+            ~prelim_od &
+            ~df['FINAL_OTHER_INJURY_UNK'] &
+            ~df['FINAL_HEART_UNK'] &
+            ~df['FINAL_ILLNESS_UNK'],
+            'FINAL_UNKNOWN_UNK'
+        ] = True
+
+        # ------------------------
+        # MANUAL (FIXED + SAFE)
+        # ------------------------
+
+        final_cols = [
+            'FINAL_ACC_OD','FINAL_ALL_OD','FINAL_HEAT','FINAL_HEAT_UNK',
+            'FINAL_COLD','FINAL_COLD_UNK',
+            'FINAL_OTHER_INJURY','FINAL_OTHER_INJURY_UNK',
+            'FINAL_HOMICIDE','FINAL_SUICIDE',
+            'FINAL_HEART','FINAL_HEART_UNK',
+            'FINAL_ILLNESS','FINAL_ILLNESS_UNK',
+            'FINAL_UNKNOWN','FINAL_UNKNOWN_UNK'
+        ]
+
+        df['MANUAL'] = ~df[final_cols].fillna(False).any(axis=1)
+
+        manual_df = df[df['MANUAL']]
+        print(manual_df)
 
     except Exception as e:
-        print(f"Exception in Final Logic block: {e}")
+        print('exception', e)
 
-    # --- FORCED SAVE OUTSIDE OF ALL TRY/EXCEPT BLOCKS ---
-    if df is not None:
-        output_file = 'fitting_mci_doc_cod/final_cod_output_1.xlsx'
-        df.to_excel(output_file, index=False)
-        print(f"\nSUCCESS: File forcefully saved to '{fitting_mci_doc_cod/final_cod_output_1.xlsx}'!")
-    else:
-        print("\nERROR: DataFrame could not be created; file was not saved.")
+
+    # =========================
+    # BLOCK 5
+    # =========================
+    try:
+        df['COD'] = 0
+
+        df.loc[df['FINAL_ACC_OD'], 'COD'] = 1
+        df.loc[df['FINAL_HEAT'], 'COD'] = 2
+        df.loc[df['FINAL_COLD'], 'COD'] = 3
+        df.loc[df['FINAL_OTHER_INJURY'], 'COD'] = 4
+        df.loc[df['FINAL_HOMICIDE'], 'COD'] = 5
+        df.loc[df['FINAL_SUICIDE'], 'COD'] = 6
+        df.loc[df['FINAL_HEART'], 'COD'] = 7
+        df.loc[df['FINAL_ILLNESS'], 'COD'] = 8
+        df.loc[df['FINAL_UNKNOWN'], 'COD'] = 9
+        df.loc[df['MANUAL'], 'COD'] = 0
+
+    except:
+        print('exception')
+
+
+    # SAVE
+    df.to_excel('fitting_mci_doc_cod/final_cod_output_1.xlsx', index=False)
 ```
 
 checking the output of COD process 1 
@@ -740,8 +773,7 @@ tbl1has %>%
 ```
 
 this section runs template 1 through the edited keywords list
-
-```{python template1edited}
+```{python edited}
 import pandas as pd
 import numpy as np
 from numpy import isnan
@@ -749,33 +781,20 @@ import math as math
 import csv
 
 # Constants
-# MEO Entries
 excel_file_name = 'fitting_mci_doc_cod/COD Coding Input template_1.xlsx'
 sub_sheet = 'Sheet1'
-# Keywords
 keywords_excel = 'fitting_mci_doc_cod/final_kw_v1.xlsx'
-kw_sub_sheet = 'keywords_additional' #this is the change
+kw_sub_sheet = 'keywords_additional'
 
-# When ran
+
 if __name__ == "__main__":
-    
-    # Initialize df outside the blocks so it's visible globally for saving
-    df = None
 
-    # --- BLOCK 1: Coding Manners into T/F ---
-    try:    
-        # Read excel file using pandas
+    try:
         df = pd.read_excel(excel_file_name, sheet_name=sub_sheet, engine='openpyxl')
-        
-        # ACCOUNT FOR NAs: Fill missing values with empty text strings
-        df['MANNER'] = df['MANNER'].fillna("").astype(str)
-        df['CAUSE'] = df['CAUSE'].fillna("").astype(str)
-        
-        # Strip and lowercase Manner and Cause columns
-        df['MANNER'] = df['MANNER'].str.strip().str.lower()
-        df['CAUSE'] = df['CAUSE'].str.strip().str.lower()
 
-        # Initialize manner columns
+        df['MANNER'] = df['MANNER'].fillna("").str.strip().str.lower()
+        df['CAUSE'] = df['CAUSE'].fillna("").str.strip().str.lower()
+
         df['ACCIDENT'] = False
         df['NATURAL'] = False
         df['HOMICIDE'] = False
@@ -783,7 +802,6 @@ if __name__ == "__main__":
         df['UNKNOWN'] = False
         df['PENDING'] = False
 
-        # Check for where manner matches
         df.loc[df['MANNER'] == 'accident', 'ACCIDENT'] = True
         df.loc[df['MANNER'] == 'natural', 'NATURAL'] = True
         df.loc[df['MANNER'] == 'homicide', 'HOMICIDE'] = True
@@ -792,61 +810,32 @@ if __name__ == "__main__":
         df.loc[df['MANNER'] == 'undetermined', 'UNKNOWN'] = True
         df.loc[df['MANNER'] == 'pending', 'PENDING'] = True
 
-        print("--- MANNER MAPPING PREVIEW ---")
-        print(df[['MANNER','ACCIDENT','NATURAL','HOMICIDE','SUICIDE','UNKNOWN']].head())  
-    except Exception as e:
-        print(f"Exception in Manner block: {e}")
+    except:
+        print('exception')
 
-    # --- BLOCK 2: Keywords list building ---
+
     try:
-        # Read codebook and convert any blank structure cells to NaNs for clean dropping
         kw_df = pd.read_excel(keywords_excel, sheet_name='keywords_additional', engine='openpyxl')
 
-        # Overdose keywords list
-        od_keywords = kw_df['OVERDOSE KEYWORDS'].dropna().astype(str).str.strip().tolist()
-        od_keywords = [x for x in od_keywords if x != "" and x != 'nan']
+        od_keywords = kw_df['OVERDOSE KEYWORDS'].dropna().astype(str).tolist()
+        heat_keywords = kw_df['HEAT KEYWORDS'].dropna().astype(str).tolist()
+        cold_keywords = kw_df['COLD KEYWORDS'].dropna().astype(str).tolist()
+        inj_keywords = kw_df['INJURY KEYWORDS'].dropna().astype(str).tolist()
+        heart_keywords = kw_df['HEART KEYWORDS'].dropna().astype(str).tolist()
+        illness_keywords = kw_df['ILLNESS KEYWORDS'].dropna().astype(str).tolist()
+        undetermined_keywords = kw_df['UNDETERMINED'].dropna().astype(str).tolist()
+        firearm_keywords = kw_df['FIREARM'].dropna().astype(str).tolist()
 
-        # Heat keywords list
-        heat_keywords = kw_df['HEAT KEYWORDS'].dropna().astype(str).str.strip().tolist()
-        heat_keywords = [x for x in heat_keywords if x != "" and x != 'nan']
-       
-        # Cold keywords list
-        cold_keywords = kw_df['COLD KEYWORDS'].dropna().astype(str).str.strip().tolist()
-        cold_keywords = [x for x in cold_keywords if x != "" and x != 'nan']
+    except:
+        print('exception')
 
-        # Injury keywords list
-        inj_keywords = kw_df['INJURY KEYWORDS'].dropna().astype(str).str.strip().tolist()
-        inj_keywords = [x for x in inj_keywords if x != "" and x != 'nan']       
 
-        # Heart keywords list   
-        heart_keywords = kw_df['HEART KEYWORDS'].dropna().astype(str).str.strip().tolist()
-        heart_keywords = [x for x in heart_keywords if x != "" and x != 'nan']
-
-        # Illness keywords list   
-        illness_keywords = kw_df['ILLNESS KEYWORDS'].dropna().astype(str).str.strip().tolist()
-        illness_keywords = [x for x in illness_keywords if x != "" and x != 'nan']
-
-        # Undetermined keywords list   
-        undetermined_keywords = kw_df['UNDETERMINED'].dropna().astype(str).str.strip().tolist()
-        undetermined_keywords = [x for x in undetermined_keywords if x != "" and x != 'nan']
-
-        # Firearm keywords list   
-        firearm_keywords = kw_df['FIREARM'].dropna().astype(str).str.strip().tolist()
-        firearm_keywords = [x for x in firearm_keywords if x != "" and x != 'nan']
-        
-        print("\n--- KEYWORDS LOADED SUCCESSFULLY ---")
-        print(f"Firearm keywords found: {len(firearm_keywords)}")
-
-    except Exception as e:
-        print(f"Exception in Keywords block: {e}")
-
-   # --- BLOCK 3: Preliminary cause assignments ---
+    # =========================
+    # BLOCK 3
+    # =========================
     try:
-        # ACCOUNT FOR NAs: Re-verify that cause fields contain text, not missing values
-        df['CAUSE'] = df['CAUSE'].fillna("").astype(str)
-        df['CAUSE'] = df['CAUSE'].str.strip().str.upper()
-        
-        # Initialize preliminary cause columns
+        df['CAUSE'] = df['CAUSE'].fillna("").str.upper()
+
         df['PRELIM_OD'] = False
         df['PRELIM_HEAT'] = False
         df['PRELIM_COLD'] = False
@@ -858,60 +847,42 @@ if __name__ == "__main__":
         df['PRELIM_FIREARM'] = False
         df['PRELIM_UNKNOWN'] = False
 
-        # Overdose
         for kw in od_keywords:
-            if pd.isna(kw) or kw == "": continue
             df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_OD'] = True
 
-        # Heat
         for kw in heat_keywords:
-            if pd.isna(kw) or kw == "": continue
             df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_HEAT'] = True
-            
-        # Cold
+
         for kw in cold_keywords:
-            if pd.isna(kw) or kw == "": continue
             df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_COLD'] = True
 
-        # Other Injury
         for kw in inj_keywords:
-            if pd.isna(kw) or kw == "": continue
             df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_OTHER_INJURY'] = True
 
-        # Homicide, only need to check if the manner = homicide
         df.loc[df['MANNER'] == 'homicide', 'PRELIM_HOMICIDE'] = True
-
-        # Suicide, only need to check if the manner = suicide
         df.loc[df['MANNER'] == 'suicide', 'PRELIM_SUICIDE'] = True
 
-        # Heart
         for kw in heart_keywords:
-            if pd.isna(kw) or kw == "": continue
             df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_HEART'] = True
 
-        # Illness
         for kw in illness_keywords:
-            if pd.isna(kw) or kw == "": continue
             df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_ILLNESS'] = True
 
-        # Firearm
         for kw in firearm_keywords:
-            if pd.isna(kw) or kw == "": continue
             df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_FIREARM'] = True
 
-        # Unknown
         for kw in undetermined_keywords:
-            if pd.isna(kw) or kw == "": continue
             df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_UNKNOWN'] = True
-            
-        print("\n--- PRELIMINARY COD ASSIGNMENTS COMPLETE ---")
 
-    except Exception as e:
-        print(f"Exception in Cause Assignment block: {e}")
+    except:
+        print('exception')
 
-    # --- BLOCK 4: Applying logic and context of Manner for Final Causes ---
+
+    # =========================
+    # BLOCK 4 (FIXED MANUAL ONLY)
+    # =========================
     try:
-        # Initialize final columns
+
         df['FINAL_ACC_OD'] = False
         df['FINAL_ALL_OD'] = False
         df['FINAL_HEAT'] = False
@@ -930,29 +901,99 @@ if __name__ == "__main__":
         df['FINAL_UNKNOWN_UNK'] = False
         df['MANUAL'] = False
 
-        # Final UNINTENTIONAL overdose (only includes only overdoses with accidental manner)
-        df.loc[df['ACCIDENT'] & df['PRELIM_OD'], 'FINAL_ACC_OD'] = True
+        accident = df['ACCIDENT'].fillna(False)
+        natural = df['NATURAL'].fillna(False)
+        unknown = df['UNKNOWN'].fillna(False)
 
-        # Final ALL Overdose count, includes overdoses of accidental, homicidal, suicidal, and undetermined manner
-        # Specifically excludes natural manner deaths as Overdose is not a natural death
-        df.loc[~df['NATURAL'] & df['PRELIM_OD'], 'FINAL_ALL_OD'] = True
+        prelim_od = df['PRELIM_OD'].fillna(False)
+        prelim_heat = df['PRELIM_HEAT'].fillna(False)
+        prelim_cold = df['PRELIM_COLD'].fillna(False)
+        prelim_other = df['PRELIM_OTHER_INJURY'].fillna(False)
+        prelim_heart = df['PRELIM_HEART'].fillna(False)
+        prelim_illness = df['PRELIM_ILLNESS'].fillna(False)
+        prelim_homicide = df['PRELIM_HOMICIDE'].fillna(False)
+        prelim_suicide = df['PRELIM_SUICIDE'].fillna(False)
 
-        # Final heat (accident only)
-        df.loc[df['ACCIDENT'] & df['PRELIM_HEAT'], 'FINAL_HEAT'] = True
-        
-        print("\n--- FINAL CLASSIFICATION COMPLETE ---")
+        df.loc[accident & prelim_od, 'FINAL_ACC_OD'] = True
+        df.loc[~natural & prelim_od, 'FINAL_ALL_OD'] = True
+
+        df.loc[accident & prelim_heat, 'FINAL_HEAT'] = True
+        df.loc[(accident | unknown) & prelim_heat, 'FINAL_HEAT_UNK'] = True
+
+        df.loc[accident & prelim_cold, 'FINAL_COLD'] = True
+        df.loc[(accident | unknown) & prelim_cold, 'FINAL_COLD_UNK'] = True
+
+        df.loc[accident & prelim_other, 'FINAL_OTHER_INJURY'] = True
+        df.loc[(accident | unknown) & prelim_other, 'FINAL_OTHER_INJURY_UNK'] = True
+
+        df.loc[prelim_homicide, 'FINAL_HOMICIDE'] = True
+        df.loc[prelim_suicide, 'FINAL_SUICIDE'] = True
+
+        df.loc[natural & prelim_heart, 'FINAL_HEART'] = True
+        df.loc[(natural | unknown) & prelim_heart, 'FINAL_HEART_UNK'] = True
+
+        df.loc[natural & prelim_illness & ~prelim_heart, 'FINAL_ILLNESS'] = True
+        df.loc[(natural | unknown) & prelim_illness & ~prelim_heart, 'FINAL_ILLNESS_UNK'] = True
+
+        df.loc[unknown, 'FINAL_UNKNOWN'] = True
+
+        df.loc[
+            unknown &
+            ~prelim_od &
+            ~df['FINAL_OTHER_INJURY_UNK'] &
+            ~df['FINAL_HEART_UNK'] &
+            ~df['FINAL_ILLNESS_UNK'],
+            'FINAL_UNKNOWN_UNK'
+        ] = True
+
+        # ------------------------
+        # MANUAL (FIXED + SAFE)
+        # ------------------------
+
+        final_cols = [
+            'FINAL_ACC_OD','FINAL_ALL_OD','FINAL_HEAT','FINAL_HEAT_UNK',
+            'FINAL_COLD','FINAL_COLD_UNK',
+            'FINAL_OTHER_INJURY','FINAL_OTHER_INJURY_UNK',
+            'FINAL_HOMICIDE','FINAL_SUICIDE',
+            'FINAL_HEART','FINAL_HEART_UNK',
+            'FINAL_ILLNESS','FINAL_ILLNESS_UNK',
+            'FINAL_UNKNOWN','FINAL_UNKNOWN_UNK'
+        ]
+
+        df['MANUAL'] = ~df[final_cols].fillna(False).any(axis=1)
+
+        manual_df = df[df['MANUAL']]
+        print(manual_df)
 
     except Exception as e:
-        print(f"Exception in Final Logic block: {e}")
+        print('exception', e)
 
-    # --- FORCED SAVE OUTSIDE OF ALL TRY/EXCEPT BLOCKS ---
-    if df is not None:
-        output_file = 'fitting_mci_doc_cod/final_cod_output_1_edited.xlsx'
-        df.to_excel(output_file, index=False)
-        print(f"\nSUCCESS: File forcefully saved to '{fitting_mci_doc_cod/final_cod_output_1_edited.xlsx}'!")
-    else:
-        print("\nERROR: DataFrame could not be created; file was not saved.")
+
+    # =========================
+    # BLOCK 5
+    # =========================
+    try:
+        df['COD'] = 0
+
+        df.loc[df['FINAL_ACC_OD'], 'COD'] = 1
+        df.loc[df['FINAL_HEAT'], 'COD'] = 2
+        df.loc[df['FINAL_COLD'], 'COD'] = 3
+        df.loc[df['FINAL_OTHER_INJURY'], 'COD'] = 4
+        df.loc[df['FINAL_HOMICIDE'], 'COD'] = 5
+        df.loc[df['FINAL_SUICIDE'], 'COD'] = 6
+        df.loc[df['FINAL_HEART'], 'COD'] = 7
+        df.loc[df['FINAL_ILLNESS'], 'COD'] = 8
+        df.loc[df['FINAL_UNKNOWN'], 'COD'] = 9
+        df.loc[df['MANUAL'], 'COD'] = 0
+
+    except:
+        print('exception')
+
+
+    # SAVE
+    df.to_excel('fitting_mci_doc_cod/final_cod_output_1_edited.xlsx', index=False)
 ```
+
 
 checking the output of COD process 1 with edited keywords 
 ```{r finalcod1}
