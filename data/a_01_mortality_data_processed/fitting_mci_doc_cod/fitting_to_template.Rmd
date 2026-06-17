@@ -1069,6 +1069,31 @@ tbl1has_edited %>%
 
 
 cod_output1%>%group_by(MANUAL)%>%count()
+cod_output1_edited%>%group_by(MANUAL)%>%count()
+
+prelimvfinal<-cod_output1_edited%>%filter(if_any(all_of(prelim_vars), ~ . == TRUE))%>% filter(!if_any(all_of(final_vars), ~ . == TRUE)) 
+
+prelimvfinal%>%filter(if_any(all_of(manner_vars), ~ . == TRUE))%>%count()
+cod_output1_edited%>%filter(if_any(all_of(manner_vars), ~ . == TRUE))%>%count()
+
+prelim_vars <- c(
+  "PRELIM_OD",
+  "PRELIM_HEAT", "PRELIM_COLD",
+  "PRELIM_OTHER_INJURY", "PRELIM_HOMICIDE",
+  "PRELIM_SUICIDE", "PRELIM_HEART",
+  "PRELIM_ILLNESS", "PRELIM_FIREARM",
+  "PRELIM_UNKNOWN") 
+  
+  final_vars<-c("FINAL_ACC_OD",
+  "FINAL_ALL_OD", "FINAL_HEAT",
+  "FINAL_HEAT_UNK", "FINAL_COLD",
+  "FINAL_COLD_UNK", "FINAL_OTHER_INJURY",
+  "FINAL_OTHER_INJURY_UNK", "FINAL_HOMICIDE",
+  "FINAL_SUICIDE", "FINAL_HEART",
+  "FINAL_HEART_UNK", "FINAL_ILLNESS",
+  "FINAL_ILLNESS_UNK", "FINAL_UNKNOWN",
+  "FINAL_UNKNOWN_UNK"
+)
 ```
 
 
