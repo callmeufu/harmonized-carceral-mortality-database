@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this dataset, please cite it as below."
+title: "Harmonized Carceral Mortality Database"
+version: "1.0.0"
+date-released: 2026-06-24
+authors:
+  - family-names: "Emaikwu"
+    given-names: "Ufuoma"
+    orcid: "https://orcid.org/0000-0001-6779-1749"
+    affiliation: "University of Arizona"
+  - family-names: "Daza"
+    given-names: "Gabriela"
+    affiliation: "Columbia University"
+  - family-names: "Palmer"
+    given-names: "Anna"
+    affiliation: "Columbia University"
