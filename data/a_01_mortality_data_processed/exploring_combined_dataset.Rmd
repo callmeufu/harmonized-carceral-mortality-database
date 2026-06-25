@@ -23,7 +23,7 @@ library(ggplot2)
 combined<-read.csv("fitting_mci_doc_cod/mci_doc_combined.csv")
 ```
 
-##summary stats and plots 
+##summary of state data completeness 
 ```{r summarizing data}
 #checking how many states are represented , finding out all states are
 statetable<-combined%>%group_by(state_abbrev)%>%count()
@@ -63,3 +63,47 @@ ggplot(combined, aes(x =year, y = fct_reorder(state_abbrev, year, .fun = min, .d
 
 ```
 
+##summarizing across time (2013-2019 according to the plot)
+```{r summarizingtime}
+library(dplyr)
+library(ggplot2)
+
+states20132019<- combined %>% filter(year >=2013 & year<=2019)%>%group_by(state_abbrev)%>%summarize(years_covered = n_distinct(year))%>%filter(years_covered==7)%>%pull(state_abbrev)
+  
+filtered_states <- combined %>%
+  filter(state_abbrev %in% states20132019) %>% filter(year >=2013 & year<=2019)
+
+yearly_comparison <- filtered_states %>%
+  group_by(year) %>%
+  summarize(total_records = n())
+```
+
+#by climate region
+```{r climateregion}
+
+climateregions <- combined %>%
+  mutate(
+    climate_region = case_when(
+      state_abbrev %in% c("CT", "DE", "ME", "MD", "MA", "NH", "NJ", "NY", "PA", "RI", "VT") ~ "Northeast",
+      state_abbrev %in% c("IA", "MI", "MN", "WI")                                         ~ "Upper Midwest",
+      state_abbrev %in% c("IL", "IN", "KY", "MO", "OH", "TN", "WV")                       ~ "Ohio Valley",
+      state_abbrev %in% c("AL", "FL", "GA", "NC", "SC", "VA")                             ~ "Southeast",
+      state_abbrev %in% c("MT", "NE", "ND", "SD", "WY")                                   ~ "Northern Rockies and Plains",
+      state_abbrev %in% c("AR", "KS", "LA", "MS", "OK", "TX")                             ~ "South",
+      state_abbrev %in% c("AZ", "CO", "NM", "UT")                                         ~ "Southwest",
+      state_abbrev %in% c("ID", "OR", "WA")                                               ~ "Northwest",
+      state_abbrev %in% c("CA", "NV")                                                     ~ "West",
+      TRUE ~ "Unknown/Other"
+    )
+  )
+
+
+region_analysis <- climateregions %>%
+  group_by(climate_region) %>% 
+  summarise(
+    earliest_year = min(year, na.rm = TRUE),
+    total_deaths  = n()  # This counts the actual rows/deaths in each region
+  )
+            
+            
+```
