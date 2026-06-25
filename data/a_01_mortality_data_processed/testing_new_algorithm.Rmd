@@ -24,9 +24,7 @@ template<-read_xlsx("fitting_mci_doc_cod/COD Coding Input template.xlsx")
 combined<-read.csv("fitting_mci_doc_cod/mci_doc_combined.csv")
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
 
 ```{python, newtemplate}
 import pandas as pd
@@ -40,9 +38,7 @@ kw_sub_sheet = 'adapted_keywords'
 
 if __name__ == "__main__":
 
-# =========================
-    # BLOCK 1: Manner Extraction (Substring Match)
-    # =========================
+
     try:
         df = pd.read_excel(excel_file_name, sheet_name=sub_sheet, engine='openpyxl')
 
@@ -57,16 +53,12 @@ if __name__ == "__main__":
         df['PENDING'] = df['MANNER'].str.contains('pending', na=False)
         df['UNKNOWN'] = df['MANNER'].str.contains('unknown', na=False) | df['MANNER'].str.contains('undetermined', na=False)
         
-        # FIXED: Mark NATURAL as True if manner contains "natural" OR "illness"
+
         df['NATURAL'] = df['MANNER'].str.contains('natural', na=False) | df['MANNER'].str.contains('illness', na=False)
 
     except Exception as e:
         print('Exception in Block 1:', e)
         
-
-    # =========================
-    # BLOCK 2: Keyword Loading (Updated Columns)
-    # =========================
     try:
         kw_df = pd.read_excel(keywords_excel, sheet_name=kw_sub_sheet, engine='openpyxl')
 
@@ -85,11 +77,9 @@ if __name__ == "__main__":
     except Exception as e:
         print('Exception in Block 2:', e)
 
-# =========================
-    # BLOCK 3 & 4: Cause Extraction & Hierarchical Roll-up
-    # =========================
+
     try:
-        # 1. Initialize the 10 specific cause categories
+  
         df['FINAL_OD'] = False
         df['FINAL_COLD'] = False
         df['FINAL_HEAT'] = False
@@ -102,7 +92,7 @@ if __name__ == "__main__":
         df['FINAL_ILLNESS'] = False
         df['FINAL_UNDETERMINED_CAUSE'] = False # Added to track explicit undetermined keywords
 
-        # Run string contains checks purely on CAUSE text
+
         for kw in od_keywords:
             df.loc[df['CAUSE'].str.contains(kw, na=False), 'FINAL_OD'] = True
 
@@ -137,9 +127,7 @@ if __name__ == "__main__":
         for kw in undetermined_keywords:
             df.loc[df['CAUSE'].str.contains(kw, na=False), 'FINAL_UNDETERMINED_CAUSE'] = True
 
-# ---------------------------------------------------------
-        # 2. HIERARCHY MAPPING (Safe OR Logic)
-        # ---------------------------------------------------------
+
         
         # Non-Communicable is True if it matched its own keywords OR if it's a Heart condition
         df['FINAL_NON_COMM_DISEASE'] = df['FINAL_NON_COMM_DISEASE'] | df['FINAL_HEART']
@@ -157,9 +145,7 @@ if __name__ == "__main__":
         all_cause_branches = ['CAUSE_EXTERNAL', 'CAUSE_INTERNAL', 'CAUSE_UNDETERMINED']
         df['MANUAL'] = ~df[all_cause_branches].any(axis=1)
         
-# =========================
-    # BLOCK 5: Mapping Final Code Outputs
-    # =========================
+
     try:
         df['COD'] = 0
 
@@ -229,6 +215,11 @@ cause_vars <- c(
   "FINAL_SUICIDE_CAUSE", "FINAL_HOMICIDE_CAUSE",
   "FINAL_OTHER_INJURY", "FINAL_HEART", "FINAL_COMM_DISEASE",
   "FINAL_NON_COMM_DISEASE", "FINAL_ILLNESS")
+
+
+test_output1%>%
+  filter(!if_any(all_of(cause_vars), ~ . == TRUE)) %>%
+  count() #11041
 
 test_output1 %>%
   summarise(across(
