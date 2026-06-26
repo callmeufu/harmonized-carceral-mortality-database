@@ -105,5 +105,12 @@ region_analysis <- climateregions %>%
     total_deaths  = n()  # This counts the actual rows/deaths in each region
   )
             
-            
+```
+
+#demographics
+```{r race and age}
+combined%>%group_by(race)%>%count()
+
+sum(is.na(combined$age))
+summary(combined$age)
 ```
