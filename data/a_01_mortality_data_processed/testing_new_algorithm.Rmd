@@ -186,7 +186,9 @@ test_output1%>%filter(is.na(MANNER) & is.na(CAUSE))%>%count()
 #1  7688
 
 test_output1%>%filter(is.na(MANNER))%>%count() #7688
+test_output1%>%filter(!is.na(MANNER))%>%count() #41995
 test_output1%>%filter(is.na(CAUSE))%>%count() #34487 
+test_output1%>%filter(!is.na(CAUSE))%>%count() #15196
 
 manner_vars <- c("ACCIDENT", "NATURAL", "HOMICIDE", "SUICIDE",
   "UNKNOWN", "PENDING") 
@@ -195,6 +197,10 @@ manner_vars <- c("ACCIDENT", "NATURAL", "HOMICIDE", "SUICIDE",
 test_output1%>%
   filter(!if_any(all_of(manner_vars), ~ . == TRUE)) %>%
   count() #11041
+
+test_output1%>%
+  filter(if_any(all_of(manner_vars), ~ . == TRUE)) %>%
+  count() #38642
 
 test_output1%>%group_by(MANUAL)%>%count()
 
@@ -219,7 +225,11 @@ cause_vars <- c(
 
 test_output1%>%
   filter(!if_any(all_of(cause_vars), ~ . == TRUE)) %>%
-  count() #11041
+  count() #36006
+test_output1%>%
+  filter(if_any(all_of(cause_vars), ~ . == TRUE)) %>%
+  count() #13677
+
 
 test_output1 %>%
   summarise(across(
@@ -272,5 +282,15 @@ prelimvfinal<-cod_output1_edited%>%filter(if_any(all_of(prelim_vars), ~ . == TRU
 
 prelimvfinal%>%filter(if_any(all_of(manner_vars), ~ . == TRUE))%>%count()
 cod_output1_edited%>%filter(if_any(all_of(manner_vars), ~ . == TRUE))%>%count()
+
+
+#example for paper
+install.packages("clipr")
+
+example<-test_output1 %>%
+  filter(CASE_NUMBER %in% c(5455, 4919))%>%clipr::write_clip()
+
+test_output1%>%group_by(COD)%>%count()
+
 
 ```

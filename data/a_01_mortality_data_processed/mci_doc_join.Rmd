@@ -123,8 +123,8 @@ mci<-mci%>%mutate(Race6=(if_else(race== "Other", 1, 0)))
 #evaluate (have)
 mci%>%group_by(cause_of_death)%>%count()
 mci <- mci %>%
-  mutate(Evaluate = if_else(!is.na(cause_of_death) & cause_of_death != "", 1, NA_real_))
-mci%>%group_by(Evaluate)%>%count()
+  mutate(evaluate = if_else(!is.na(cause_of_death) & cause_of_death != "", 1, NA_real_))
+mci%>%group_by(evaluate)%>%count()
 
 #cause (have)
 mci%>%group_by(cause_of_death)%>%count()
@@ -140,8 +140,8 @@ cod_lookup <- c(
 )
 
 mci <- mci %>%
-  mutate(Cause = cod_lookup[cause_of_death])
-mci%>%group_by(Cause)%>%count() #same 
+  mutate(cause = cod_lookup[cause_of_death])
+mci%>%group_by(cause)%>%count() #same 
 
 #illspec (have)
 mci<-mci%>%mutate(Illspec=illspec)
@@ -197,7 +197,11 @@ combining DOC and MCI
 combined <- bind_rows(mci, doc)
 class(combined)
 
-combined<-combined%>%select(-Dobmon, -Dobday, -Dobyear, -Deathmon, -Deathday, -Year, -Place, -State, -Facname, -Gender, - Race, -Hispanic, -Race1, -Race2, -Race3, -Race4, -Race5, -Race6, -Illspec, -Drugspec, -Selfspec, , Accspec, -Suicspec, -Homispec, -Otherspec)
+
+combined$location <- paste(combined$incident_location, combined$location, sep = ", ")
+
+
+combined<-combined%>%select(-Dobmon, -Dobday, -Dobyear, -Deathmon, -Deathday, -Year, -Place, -State, -Facname, -Gender, - Race, -Hispanic, -Race1, -Race2, -Race3, -Race4, -Race5, -Race6, -Illspec, -Drugspec, -Selfspec, -Accspec, -Suicspec, -Homispec, -Otherspec, -incident_location)
 write.csv(combined, "mci_doc_combined.csv")
 ```
 
