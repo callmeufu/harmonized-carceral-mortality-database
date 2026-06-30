@@ -2,28 +2,637 @@
 title: "comparing_algorithms"
 output: html_document
 date: "2026-06-30"
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readxl)
+library(writexl)
+library(reticulate)
+py_require("pandas")
+py_require("numpy")
+py_require("openpyxl")
+
+template<-read_xlsx("COD Coding Input template.xlsx")
+combined<-read.csv("mci_doc_combined.csv")
+
+set.seed(30)
+random_sample <- combined %>% slice_sample(n = 100)
+write_csv(random_sample, "random_sample.csv")
 ```
 
-## R Markdown
+```{r fitting to template}
+sample_template <- random_sample %>%
+  transmute(
+    CASE_NUMBER = X,
+    MANNER = cause_of_death,
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+   CAUSE = coalesce(
+      illspec,
+      drugspec,
+      homispec,
+      suicspec,
+      selfspec,
+      accspec,
+      otherspec
+    )
+  )
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+sample_template %>%summarise(n_missing = sum(is.na(MANNER) | MANNER == "")) #10
+sample_template %>%summarise(n_missing = sum(is.na(CAUSE) | CAUSE == "")) #72
 
-```{r cars}
-summary(cars)
+write_xlsx(sample_template, "sample_template.xlsx")
 ```
 
-## Including Plots
+##Putting sample through old algorithm
+```{python template1NA}
+import pandas as pd
+import numpy as np
+from numpy import isnan
+import math as math
+import csv
 
-You can also embed plots, for example:
+# Constants
+excel_file_name = 'sample_template.xlsx'
+sub_sheet = 'Sheet1'
+keywords_excel = 'final_kw_v1.xlsx'
+kw_sub_sheet = 'keywords'
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+
+if __name__ == "__main__":
+
+    try:
+        df = pd.read_excel(excel_file_name, sheet_name=sub_sheet, engine='openpyxl')
+
+        df['MANNER'] = df['MANNER'].fillna("").str.strip().str.lower()
+        df['CAUSE'] = df['CAUSE'].fillna("").str.strip().str.lower()
+
+        df['ACCIDENT'] = False
+        df['NATURAL'] = False
+        df['HOMICIDE'] = False
+        df['SUICIDE'] = False
+        df['UNKNOWN'] = False
+        df['PENDING'] = False
+
+        df.loc[df['MANNER'] == 'accident', 'ACCIDENT'] = True
+        df.loc[df['MANNER'] == 'natural', 'NATURAL'] = True
+        df.loc[df['MANNER'] == 'homicide', 'HOMICIDE'] = True
+        df.loc[df['MANNER'] == 'suicide', 'SUICIDE'] = True
+        df.loc[df['MANNER'] == 'unknown', 'UNKNOWN'] = True
+        df.loc[df['MANNER'] == 'undetermined', 'UNKNOWN'] = True
+        df.loc[df['MANNER'] == 'pending', 'PENDING'] = True
+
+    except:
+        print('exception')
+
+
+    try:
+        kw_df = pd.read_excel(keywords_excel, sheet_name='keywords', engine='openpyxl')
+
+        od_keywords = kw_df['OVERDOSE KEYWORDS'].dropna().astype(str).tolist()
+        heat_keywords = kw_df['HEAT KEYWORDS'].dropna().astype(str).tolist()
+        cold_keywords = kw_df['COLD KEYWORDS'].dropna().astype(str).tolist()
+        inj_keywords = kw_df['INJURY KEYWORDS'].dropna().astype(str).tolist()
+        heart_keywords = kw_df['HEART KEYWORDS'].dropna().astype(str).tolist()
+        illness_keywords = kw_df['ILLNESS KEYWORDS'].dropna().astype(str).tolist()
+        undetermined_keywords = kw_df['UNDETERMINED'].dropna().astype(str).tolist()
+        firearm_keywords = kw_df['FIREARM'].dropna().astype(str).tolist()
+
+    except:
+        print('exception')
+
+
+    try:
+        df['CAUSE'] = df['CAUSE'].fillna("").str.upper()
+
+        df['PRELIM_OD'] = False
+        df['PRELIM_HEAT'] = False
+        df['PRELIM_COLD'] = False
+        df['PRELIM_OTHER_INJURY'] = False
+        df['PRELIM_HOMICIDE'] = False
+        df['PRELIM_SUICIDE'] = False
+        df['PRELIM_HEART'] = False
+        df['PRELIM_ILLNESS'] = False
+        df['PRELIM_FIREARM'] = False
+        df['PRELIM_UNKNOWN'] = False
+
+        for kw in od_keywords:
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_OD'] = True
+
+        for kw in heat_keywords:
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_HEAT'] = True
+
+        for kw in cold_keywords:
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_COLD'] = True
+
+        for kw in inj_keywords:
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_OTHER_INJURY'] = True
+
+        df.loc[df['MANNER'] == 'homicide', 'PRELIM_HOMICIDE'] = True
+        df.loc[df['MANNER'] == 'suicide', 'PRELIM_SUICIDE'] = True
+
+        for kw in heart_keywords:
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_HEART'] = True
+
+        for kw in illness_keywords:
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_ILLNESS'] = True
+
+        for kw in firearm_keywords:
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_FIREARM'] = True
+
+        for kw in undetermined_keywords:
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'PRELIM_UNKNOWN'] = True
+
+    except:
+        print('exception')
+
+
+    try:
+
+        df['FINAL_ACC_OD'] = False
+        df['FINAL_ALL_OD'] = False
+        df['FINAL_HEAT'] = False
+        df['FINAL_HEAT_UNK'] = False
+        df['FINAL_COLD'] = False
+        df['FINAL_COLD_UNK'] = False
+        df['FINAL_OTHER_INJURY'] = False
+        df['FINAL_OTHER_INJURY_UNK'] = False
+        df['FINAL_HOMICIDE'] = False
+        df['FINAL_SUICIDE'] = False
+        df['FINAL_HEART'] = False
+        df['FINAL_HEART_UNK'] = False
+        df['FINAL_ILLNESS'] = False
+        df['FINAL_ILLNESS_UNK'] = False
+        df['FINAL_UNKNOWN'] = False
+        df['FINAL_UNKNOWN_UNK'] = False
+        df['MANUAL'] = False
+
+        accident = df['ACCIDENT'].fillna(False)
+        natural = df['NATURAL'].fillna(False)
+        unknown = df['UNKNOWN'].fillna(False)
+
+        prelim_od = df['PRELIM_OD'].fillna(False)
+        prelim_heat = df['PRELIM_HEAT'].fillna(False)
+        prelim_cold = df['PRELIM_COLD'].fillna(False)
+        prelim_other = df['PRELIM_OTHER_INJURY'].fillna(False)
+        prelim_heart = df['PRELIM_HEART'].fillna(False)
+        prelim_illness = df['PRELIM_ILLNESS'].fillna(False)
+        prelim_homicide = df['PRELIM_HOMICIDE'].fillna(False)
+        prelim_suicide = df['PRELIM_SUICIDE'].fillna(False)
+
+        df.loc[accident & prelim_od, 'FINAL_ACC_OD'] = True
+        df.loc[~natural & prelim_od, 'FINAL_ALL_OD'] = True
+
+        df.loc[accident & prelim_heat, 'FINAL_HEAT'] = True
+        df.loc[(accident | unknown) & prelim_heat, 'FINAL_HEAT_UNK'] = True
+
+        df.loc[accident & prelim_cold, 'FINAL_COLD'] = True
+        df.loc[(accident | unknown) & prelim_cold, 'FINAL_COLD_UNK'] = True
+
+        df.loc[accident & prelim_other, 'FINAL_OTHER_INJURY'] = True
+        df.loc[(accident | unknown) & prelim_other, 'FINAL_OTHER_INJURY_UNK'] = True
+
+        df.loc[prelim_homicide, 'FINAL_HOMICIDE'] = True
+        df.loc[prelim_suicide, 'FINAL_SUICIDE'] = True
+
+        df.loc[natural & prelim_heart, 'FINAL_HEART'] = True
+        df.loc[(natural | unknown) & prelim_heart, 'FINAL_HEART_UNK'] = True
+
+        df.loc[natural & prelim_illness & ~prelim_heart, 'FINAL_ILLNESS'] = True
+        df.loc[(natural | unknown) & prelim_illness & ~prelim_heart, 'FINAL_ILLNESS_UNK'] = True
+
+        df.loc[unknown, 'FINAL_UNKNOWN'] = True
+
+        df.loc[
+            unknown &
+            ~prelim_od &
+            ~df['FINAL_OTHER_INJURY_UNK'] &
+            ~df['FINAL_HEART_UNK'] &
+            ~df['FINAL_ILLNESS_UNK'],
+            'FINAL_UNKNOWN_UNK'
+        ] = True
+
+
+        final_cols = [
+            'FINAL_ACC_OD','FINAL_ALL_OD','FINAL_HEAT','FINAL_HEAT_UNK',
+            'FINAL_COLD','FINAL_COLD_UNK',
+            'FINAL_OTHER_INJURY','FINAL_OTHER_INJURY_UNK',
+            'FINAL_HOMICIDE','FINAL_SUICIDE',
+            'FINAL_HEART','FINAL_HEART_UNK',
+            'FINAL_ILLNESS','FINAL_ILLNESS_UNK',
+            'FINAL_UNKNOWN','FINAL_UNKNOWN_UNK'
+        ]
+
+        df['MANUAL'] = ~df[final_cols].fillna(False).any(axis=1)
+
+        manual_df = df[df['MANUAL']]
+        print(manual_df)
+
+    except Exception as e:
+        print('exception', e)
+ 
+    try:
+        df['COD'] = 0
+
+        df.loc[df['FINAL_ACC_OD'], 'COD'] = 1
+        df.loc[df['FINAL_HEAT'], 'COD'] = 2
+        df.loc[df['FINAL_COLD'], 'COD'] = 3
+        df.loc[df['FINAL_OTHER_INJURY'], 'COD'] = 4
+        df.loc[df['FINAL_HOMICIDE'], 'COD'] = 5
+        df.loc[df['FINAL_SUICIDE'], 'COD'] = 6
+        df.loc[df['FINAL_HEART'], 'COD'] = 7
+        df.loc[df['FINAL_ILLNESS'], 'COD'] = 8
+        df.loc[df['FINAL_UNKNOWN'], 'COD'] = 9
+        df.loc[df['MANUAL'], 'COD'] = 0
+
+    except:
+        print('exception')
+
+
+    # SAVE
+    df.to_excel('sample_results_og_algorithm.xlsx', index=False)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+checking the output of COD process 1 
+```{r finalcod1}
+sample_output_og_algorithm<-read_xlsx("sample_results_og_algorithm.xlsx")
+
+sample_output_og_algorithm%>%filter(is.na(MANNER) & is.na(CAUSE))%>%count()
+
+#10
+
+sample_output_og_algorithm%>%filter(is.na(MANNER))%>%count() #10
+sample_output_og_algorithm%>%filter(is.na(CAUSE))%>%count() #72
+
+cod_vars <- c(
+  "ACCIDENT", "NATURAL", "HOMICIDE", "SUICIDE",
+  "UNKNOWN", "PENDING", "PRELIM_OD",
+  "PRELIM_HEAT", "PRELIM_COLD",
+  "PRELIM_OTHER_INJURY", "PRELIM_HOMICIDE",
+  "PRELIM_SUICIDE", "PRELIM_HEART",
+  "PRELIM_ILLNESS", "PRELIM_FIREARM",
+  "PRELIM_UNKNOWN", "FINAL_ACC_OD",
+  "FINAL_ALL_OD", "FINAL_HEAT",
+  "FINAL_HEAT_UNK", "FINAL_COLD",
+  "FINAL_COLD_UNK", "FINAL_OTHER_INJURY",
+  "FINAL_OTHER_INJURY_UNK", "FINAL_HOMICIDE",
+  "FINAL_SUICIDE", "FINAL_HEART",
+  "FINAL_HEART_UNK", "FINAL_ILLNESS",
+  "FINAL_ILLNESS_UNK", "FINAL_UNKNOWN",
+  "FINAL_UNKNOWN_UNK"
+)
+manner_vars <- c(
+  "ACCIDENT", "NATURAL", "HOMICIDE", "SUICIDE",
+  "UNKNOWN", "PENDING"
+)
+cause_vars <- c(
+  "PRELIM_OD",
+  "PRELIM_HEAT", "PRELIM_COLD",
+  "PRELIM_OTHER_INJURY", "PRELIM_HOMICIDE",
+  "PRELIM_SUICIDE", "PRELIM_HEART",
+  "PRELIM_ILLNESS", "PRELIM_FIREARM",
+  "PRELIM_UNKNOWN", "FINAL_ACC_OD",
+  "FINAL_ALL_OD", "FINAL_HEAT",
+  "FINAL_HEAT_UNK", "FINAL_COLD",
+  "FINAL_COLD_UNK", "FINAL_OTHER_INJURY",
+  "FINAL_OTHER_INJURY_UNK", "FINAL_HOMICIDE",
+  "FINAL_SUICIDE", "FINAL_HEART",
+  "FINAL_HEART_UNK", "FINAL_ILLNESS",
+  "FINAL_ILLNESS_UNK", "FINAL_UNKNOWN",
+  "FINAL_UNKNOWN_UNK"
+)
+
+sample_output_og_algorithm%>%
+  filter(!if_any(all_of(cod_vars), ~ . == TRUE)) %>%
+  count()#60
+
+sample_output_og_algorithm%>%group_by(MANUAL)%>%count()
+
+sample_output_og_algorithm%>%
+  summarise(across(
+    all_of(manner_vars),
+    ~ sum(. == TRUE, na.rm = TRUE)
+  )) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "n_true"
+  ) %>%
+  arrange(desc(n_true))
+
+sample_output_og_algorithm %>%
+  summarise(across(
+    all_of(cause_vars),
+    ~ sum(. == TRUE, na.rm = TRUE)
+  )) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "n_true"
+  ) %>%
+  arrange(desc(n_true))
+
+
+tblnone1<-sample_output_og_algorithm%>%
+  filter(!if_any(all_of(cod_vars), ~ . == TRUE)) 
+
+tblnone1%>%group_by(MANNER)%>%count()
+tblnone1 %>% 
+  group_by(MANNER) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n))
+
+tblnone1desc<-tblnone1 %>% 
+  group_by(CAUSE) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n))
+
+tbl1has<-sample_output_og_algorithm%>%
+  filter(if_any(all_of(cod_vars), ~ . == TRUE)) 
+
+
+tbl1has %>% 
+  group_by(MANNER) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n))
+
+
+tbl1has %>% 
+  group_by(CAUSE) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n))
+
+```
+
+## putting sample through new algorithm 
+
+```{python, newtemplate}
+import pandas as pd
+import numpy as np
+
+# Constants
+excel_file_name = 'sample_template.xlsx'
+sub_sheet = 'Sheet1'
+keywords_excel = 'final_kw_v1.xlsx'
+kw_sub_sheet = 'adapted_keywords'
+
+if __name__ == "__main__":
+
+
+    try:
+        df = pd.read_excel(excel_file_name, sheet_name=sub_sheet, engine='openpyxl')
+
+        # Clean and standardize
+        df['MANNER'] = df['MANNER'].fillna("").str.strip().str.lower()
+        df['CAUSE'] = df['CAUSE'].fillna("").str.strip().str.upper()
+
+        # Extract manner flags using substring matching
+        df['ACCIDENT'] = df['MANNER'].str.contains('accident', na=False)
+        df['HOMICIDE'] = df['MANNER'].str.contains('homicide', na=False)
+        df['SUICIDE'] = df['MANNER'].str.contains('suicide', na=False)
+        df['PENDING'] = df['MANNER'].str.contains('pending', na=False)
+        df['UNKNOWN'] = df['MANNER'].str.contains('unknown', na=False) | df['MANNER'].str.contains('undetermined', na=False)
+        
+
+        df['NATURAL'] = df['MANNER'].str.contains('natural', na=False) | df['MANNER'].str.contains('illness', na=False)
+
+    except Exception as e:
+        print('Exception in Block 1:', e)
+        
+    try:
+        kw_df = pd.read_excel(keywords_excel, sheet_name=kw_sub_sheet, engine='openpyxl')
+
+        # Reading the 10 exact keyword columns from your new sheet
+        od_keywords = kw_df['OVERDOSE KEYWORDS'].dropna().astype(str).str.upper().tolist()
+        cold_keywords = kw_df['COLD KEYWORDS'].dropna().astype(str).str.upper().tolist()
+        heat_keywords = kw_df['HEAT KEYWORDS'].dropna().astype(str).str.upper().tolist()
+        suicide_keywords = kw_df['SUICIDE KEYWORDS'].dropna().astype(str).str.upper().tolist()
+        homicide_keywords = kw_df['HOMICIDE KEYWORDS'].dropna().astype(str).str.upper().tolist()
+        inj_keywords = kw_df['INJURY KEYWORDS'].dropna().astype(str).str.upper().tolist()
+        heart_keywords = kw_df['HEART KEYWORDS'].dropna().astype(str).str.upper().tolist()
+        comm_keywords = kw_df['COMMUNICABLE DISEASE KEYWORDS'].dropna().astype(str).str.upper().tolist()
+        non_comm_keywords = kw_df['NON-COMMUNICABLE DISEASE KEYWORDS'].dropna().astype(str).str.upper().tolist()
+        illness_keywords = kw_df['ILLNESS KEYWORDS'].dropna().astype(str).str.upper().tolist()
+
+    except Exception as e:
+        print('Exception in Block 2:', e)
+
+
+    try:
+  
+        df['FINAL_OD'] = False
+        df['FINAL_COLD'] = False
+        df['FINAL_HEAT'] = False
+        df['FINAL_SUICIDE_CAUSE'] = False
+        df['FINAL_HOMICIDE_CAUSE'] = False
+        df['FINAL_OTHER_INJURY'] = False
+        df['FINAL_HEART'] = False
+        df['FINAL_COMM_DISEASE'] = False
+        df['FINAL_NON_COMM_DISEASE'] = False
+        df['FINAL_ILLNESS'] = False
+        df['FINAL_UNDETERMINED_CAUSE'] = False # Added to track explicit undetermined keywords
+
+
+        for kw in od_keywords:
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'FINAL_OD'] = True
+
+        for kw in cold_keywords:
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'FINAL_COLD'] = True
+
+        for kw in heat_keywords:
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'FINAL_HEAT'] = True
+
+        for kw in suicide_keywords:
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'FINAL_SUICIDE_CAUSE'] = True
+
+        for kw in homicide_keywords:
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'FINAL_HOMICIDE_CAUSE'] = True
+
+        for kw in inj_keywords:
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'FINAL_OTHER_INJURY'] = True
+
+        for kw in heart_keywords:
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'FINAL_HEART'] = True
+
+        for kw in comm_keywords:
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'FINAL_COMM_DISEASE'] = True
+
+        for kw in non_comm_keywords:
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'FINAL_NON_COMM_DISEASE'] = True
+
+        for kw in illness_keywords:
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'FINAL_ILLNESS'] = True
+
+        # Assume you still have undetermined_keywords from previous block
+        for kw in undetermined_keywords:
+            df.loc[df['CAUSE'].str.contains(kw, na=False), 'FINAL_UNDETERMINED_CAUSE'] = True
+
+
+        
+        # Non-Communicable is True if it matched its own keywords OR if it's a Heart condition
+        df['FINAL_NON_COMM_DISEASE'] = df['FINAL_NON_COMM_DISEASE'] | df['FINAL_HEART']
+
+        # Sub-branches
+        df['CAUSE_ACCIDENTAL'] = df['FINAL_COLD'] | df['FINAL_HEAT'] | df['FINAL_OD'] | df['FINAL_OTHER_INJURY']
+        df['CAUSE_INTENTIONAL'] = df['FINAL_SUICIDE_CAUSE'] | df['FINAL_HOMICIDE_CAUSE']
+        
+        # Main Branches
+        df['CAUSE_EXTERNAL'] = df['CAUSE_ACCIDENTAL'] | df['CAUSE_INTENTIONAL']
+        df['CAUSE_INTERNAL'] = df['FINAL_COMM_DISEASE'] | df['FINAL_NON_COMM_DISEASE'] | df['FINAL_ILLNESS']
+        df['CAUSE_UNDETERMINED'] = df['FINAL_UNDETERMINED_CAUSE']
+
+        # Manual review tracking
+        all_cause_branches = ['CAUSE_EXTERNAL', 'CAUSE_INTERNAL', 'CAUSE_UNDETERMINED']
+        df['MANUAL'] = ~df[all_cause_branches].any(axis=1)
+        
+
+    try:
+        df['COD'] = 0
+
+        # 1. Map the broader hierarchical branches first
+        df.loc[df['CAUSE_UNDETERMINED'], 'COD'] = 99  # Example fallback for undetermined
+        
+        # 2. Map specific categories (Order matters: lowest priority to highest priority)
+        df.loc[df['FINAL_ILLNESS'], 'COD'] = 10
+        df.loc[df['FINAL_NON_COMM_DISEASE'], 'COD'] = 9 
+        df.loc[df['FINAL_COMM_DISEASE'], 'COD'] = 8
+        
+        # This sits BELOW non-communicable disease, so heart cases get correctly stamped as 7
+        df.loc[df['FINAL_HEART'], 'COD'] = 7 
+        
+        df.loc[df['FINAL_OTHER_INJURY'], 'COD'] = 6
+        df.loc[df['FINAL_HOMICIDE_CAUSE'], 'COD'] = 5
+        df.loc[df['FINAL_SUICIDE_CAUSE'], 'COD'] = 4
+        df.loc[df['FINAL_COLD'], 'COD'] = 3
+        df.loc[df['FINAL_HEAT'], 'COD'] = 2
+        df.loc[df['FINAL_OD'], 'COD'] = 1
+        
+        # If no cause keywords matched at all
+        df.loc[df['MANUAL'], 'COD'] = 0
+
+    except Exception as e:
+        print('Exception in Block 5:', e)
+
+    # Save
+    df.to_excel('sample_results_adapted_algorithm.xlsx', index=False)
+```
+
+checking test algorithm output
+```{r testingtest}
+sample_output_adapted_algorithm<-read_xlsx("sample_results_adapted_algorithm.xlsx")
+
+sample_output_adapted_algorithm%>%filter(is.na(MANNER) & is.na(CAUSE))%>%count()
+
+
+
+sample_output_adapted_algorithm%>%filter(is.na(MANNER))%>%count() 
+sample_output_adapted_algorithm%>%filter(!is.na(MANNER))%>%count() 
+sample_output_adapted_algorithm%>%filter(is.na(CAUSE))%>%count()
+sample_output_adapted_algorithm%>%filter(!is.na(CAUSE))%>%count() 
+
+manner_vars <- c("ACCIDENT", "NATURAL", "HOMICIDE", "SUICIDE",
+  "UNKNOWN", "PENDING") 
+
+
+sample_output_adapted_algorithm%>%
+  filter(!if_any(all_of(manner_vars), ~ . == TRUE)) %>%
+  count() 
+
+sample_output_adapted_algorithm%>%
+  filter(if_any(all_of(manner_vars), ~ . == TRUE)) %>%
+  count() 
+
+sample_output_adapted_algorithm%>%group_by(MANUAL)%>%count()
+
+sample_output_adapted_algorithm %>%
+  summarise(across(
+    all_of(manner_vars),
+    ~ sum(. == TRUE, na.rm = TRUE)
+  )) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "n_true"
+  ) %>%
+  arrange(desc(n_true))
+
+cause_vars <- c(
+  "FINAL_OD", "FINAL_HEAT", "FINAL_COLD",
+  "FINAL_SUICIDE_CAUSE", "FINAL_HOMICIDE_CAUSE",
+  "FINAL_OTHER_INJURY", "FINAL_HEART", "FINAL_COMM_DISEASE",
+  "FINAL_NON_COMM_DISEASE", "FINAL_ILLNESS")
+
+
+sample_output_adapted_algorithm%>%
+  filter(!if_any(all_of(cause_vars), ~ . == TRUE)) %>%
+  count() #36006
+test_output1%>%
+  filter(if_any(all_of(cause_vars), ~ . == TRUE)) %>%
+  count() #13677
+
+
+test_output1 %>%
+  summarise(across(
+    all_of(cause_vars),
+    ~ sum(. == TRUE, na.rm = TRUE)
+  )) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "n_true"
+  ) %>%
+  arrange(desc(n_true))
+
+
+tblnone1_edited<-cod_output1_edited%>%
+  filter(!if_any(all_of(cod_vars), ~ . == TRUE)) 
+
+
+tblnone1_edited%>%group_by(MANNER)%>%count()
+tblnone1_edited %>% 
+  group_by(MANNER) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n))
+
+tblnone1desc_edited<-tblnone1_edited %>% 
+  group_by(CAUSE) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n))
+
+tbl1has_edited<-cod_output1_edited%>%
+  filter(if_any(all_of(cod_vars), ~ . == TRUE)) 
+
+
+tbl1has_edited %>% 
+  group_by(MANNER) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n))
+
+
+tbl1has_edited %>% 
+  group_by(CAUSE) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n))
+
+
+cod_output1%>%group_by(MANUAL)%>%count()
+cod_output1_edited%>%group_by(MANUAL)%>%count()
+
+prelimvfinal<-cod_output1_edited%>%filter(if_any(all_of(prelim_vars), ~ . == TRUE))%>% filter(!if_any(all_of(final_vars), ~ . == TRUE)) 
+
+prelimvfinal%>%filter(if_any(all_of(manner_vars), ~ . == TRUE))%>%count()
+cod_output1_edited%>%filter(if_any(all_of(manner_vars), ~ . == TRUE))%>%count()
+
+
+#example for paper
+install.packages("clipr")
+
+example<-test_output1 %>%
+  filter(CASE_NUMBER %in% c(5455, 4919))%>%clipr::write_clip()
+
+test_output1%>%group_by(COD)%>%count()
+
+
+```

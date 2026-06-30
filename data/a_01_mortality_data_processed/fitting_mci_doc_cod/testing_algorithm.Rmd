@@ -761,9 +761,9 @@ import math as math
 import csv
 
 # Constants
-excel_file_name = 'fitting_mci_doc_cod/COD Coding Input template_1.xlsx'
+excel_file_name = 'COD Coding Input template_1.xlsx'
 sub_sheet = 'Sheet1'
-keywords_excel = 'fitting_mci_doc_cod/final_kw_v1.xlsx'
+keywords_excel = 'final_kw_v1.xlsx'
 kw_sub_sheet = 'keywords_additional'
 
 
@@ -960,7 +960,7 @@ if __name__ == "__main__":
 
 
     # SAVE
-    df.to_excel('fitting_mci_doc_cod/final_cod_output_1_edited.xlsx', index=False)
+    df.to_excel('final_cod_output_1_edited.xlsx', index=False)
 ```
 
 
