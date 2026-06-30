@@ -450,9 +450,6 @@ kw_sub_sheet = 'keywords'
 
 if __name__ == "__main__":
 
-    # =========================
-    # BLOCK 1
-    # =========================
     try:
         df = pd.read_excel(excel_file_name, sheet_name=sub_sheet, engine='openpyxl')
 
@@ -478,9 +475,6 @@ if __name__ == "__main__":
         print('exception')
 
 
-    # =========================
-    # BLOCK 2 (unchanged)
-    # =========================
     try:
         kw_df = pd.read_excel(keywords_excel, sheet_name='keywords', engine='openpyxl')
 
@@ -497,9 +491,6 @@ if __name__ == "__main__":
         print('exception')
 
 
-    # =========================
-    # BLOCK 3
-    # =========================
     try:
         df['CAUSE'] = df['CAUSE'].fillna("").str.upper()
 
@@ -545,9 +536,6 @@ if __name__ == "__main__":
         print('exception')
 
 
-    # =========================
-    # BLOCK 4 (FIXED MANUAL ONLY)
-    # =========================
     try:
 
         df['FINAL_ACC_OD'] = False
@@ -613,9 +601,6 @@ if __name__ == "__main__":
             'FINAL_UNKNOWN_UNK'
         ] = True
 
-        # ------------------------
-        # MANUAL (FIXED + SAFE)
-        # ------------------------
 
         final_cols = [
             'FINAL_ACC_OD','FINAL_ALL_OD','FINAL_HEAT','FINAL_HEAT_UNK',
@@ -634,11 +619,7 @@ if __name__ == "__main__":
 
     except Exception as e:
         print('exception', e)
-
-
-    # =========================
-    # BLOCK 5
-    # =========================
+ 
     try:
         df['COD'] = 0
 
