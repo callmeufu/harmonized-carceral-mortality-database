@@ -810,9 +810,6 @@ if __name__ == "__main__":
         print('exception')
 
 
-    # =========================
-    # BLOCK 3
-    # =========================
     try:
         df['CAUSE'] = df['CAUSE'].fillna("").str.upper()
 
@@ -858,9 +855,6 @@ if __name__ == "__main__":
         print('exception')
 
 
-    # =========================
-    # BLOCK 4 (FIXED MANUAL ONLY)
-    # =========================
     try:
 
         df['FINAL_ACC_OD'] = False
@@ -926,9 +920,7 @@ if __name__ == "__main__":
             'FINAL_UNKNOWN_UNK'
         ] = True
 
-        # ------------------------
-        # MANUAL (FIXED + SAFE)
-        # ------------------------
+    
 
         final_cols = [
             'FINAL_ACC_OD','FINAL_ALL_OD','FINAL_HEAT','FINAL_HEAT_UNK',
@@ -949,9 +941,6 @@ if __name__ == "__main__":
         print('exception', e)
 
 
-    # =========================
-    # BLOCK 5
-    # =========================
     try:
         df['COD'] = 0
 
@@ -1437,7 +1426,7 @@ if __name__ == "__main__":
     # Initialize df outside the blocks so it's visible globally for saving
     df = None
 
-    # --- BLOCK 1: Coding Manners into T/F ---
+
     try:    
         # Read excel file using pandas
         df = pd.read_excel(excel_file_name, sheet_name=sub_sheet, engine='openpyxl')
@@ -1472,7 +1461,7 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Exception in Manner block: {e}")
 
-    # --- BLOCK 2: Keywords list building ---
+
     try:
         # Read codebook and convert any blank structure cells to NaNs for clean dropping
         kw_df = pd.read_excel(keywords_excel, sheet_name='keywords', engine='openpyxl')
@@ -1515,7 +1504,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Exception in Keywords block: {e}")
 
-   # --- BLOCK 3: Preliminary cause assignments ---
     try:
         # ACCOUNT FOR NAs: Re-verify that cause fields contain text, not missing values
         df['CAUSE'] = df['CAUSE'].fillna("").astype(str)
@@ -1584,7 +1572,7 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Exception in Cause Assignment block: {e}")
 
-    # --- BLOCK 4: Applying logic and context of Manner for Final Causes ---
+
     try:
         # Initialize final columns
         df['FINAL_ACC_OD'] = False
@@ -1620,7 +1608,7 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Exception in Final Logic block: {e}")
 
-    # --- FORCED SAVE OUTSIDE OF ALL TRY/EXCEPT BLOCKS ---
+
     if df is not None:
         output_file = 'fitting_mci_doc_cod/test_combinations/final_cod_output_2.xlsx'
         df.to_excel(output_file, index=False)
