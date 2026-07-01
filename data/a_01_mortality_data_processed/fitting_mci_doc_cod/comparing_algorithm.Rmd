@@ -42,6 +42,7 @@ sample_template <- random_sample %>%
 
 sample_template %>%summarise(n_missing = sum(is.na(MANNER) | MANNER == "")) #10
 sample_template %>%summarise(n_missing = sum(is.na(CAUSE) | CAUSE == "")) #72
+sample_output_og_algorithm%>%filter(!is.na(CAUSE))%>%filter(!is.na(MANNER))%>%count()
 length(unique(random_sample$state_abbrev))
 random_sample%>%group_by(is_doc)%>%count()
 random_sample%>%group_by(is_mci)%>%count()
@@ -268,6 +269,7 @@ sample_output_og_algorithm%>%filter(is.na(MANNER) & is.na(CAUSE))%>%count()
 
 sample_output_og_algorithm%>%filter(is.na(MANNER))%>%count() #10
 sample_output_og_algorithm%>%filter(is.na(CAUSE))%>%count() #72
+sample_output_og_algorithm%>%filter(!is.na(CAUSE))%>%filter(!is.na(MANNER))%>%count() #28
 
 cod_vars <- c(
   "ACCIDENT", "NATURAL", "HOMICIDE", "SUICIDE",
@@ -432,7 +434,8 @@ tbl1has %>%
 tbl<-sample_output_og_algorithm%>%
   filter(if_any(all_of(final_cause_vars), ~ . == TRUE))
 
-
+tbl2<-sample_output_og_algorithm%>%
+  filter(if_any(all_of(manner_vars), ~ . == TRUE))
 ```
 
 ## putting sample through new algorithm 
@@ -657,7 +660,11 @@ sample_output_adapted_algorithm %>%
   ) %>%
   arrange(desc(n_true))
 
+#count both
+sample_output_adapted_algorithm%>%
+  filter(if_any(all_of(cause_vars), ~ . == TRUE)) %>% filter(if_any(all_of(manner_vars), ~ . == TRUE))%>%count() 
 
+#what is not included
 
 tblnone1<-sample_output_adapted_algorithm%>%
   filter(!if_any(all_of(manner_vars), ~ . == TRUE)) 
@@ -694,6 +701,8 @@ tbl1has %>%
   summarise(n = n()) %>% 
   arrange(desc(n))
 
+tbl<-sample_output_adapted_algorithm%>%
+  filter(if_any(all_of(cause_vars), ~ . == TRUE)) %>% filter(if_any(all_of(manner_vars), ~ . == TRUE))
 
 
 ```
