@@ -255,7 +255,7 @@ if __name__ == "__main__":
     df.to_excel('sample_results_og_algorithm.xlsx', index=False)
 ```
 
-checking the output of COD process 1 
+checking the output of old algorithm with sample
 ```{r finalcod1}
 sample_output_og_algorithm<-read_xlsx("sample_results_og_algorithm.xlsx")
 
@@ -404,7 +404,7 @@ if __name__ == "__main__":
     try:
         kw_df = pd.read_excel(keywords_excel, sheet_name=kw_sub_sheet, engine='openpyxl')
 
-        # Reading the 10 exact keyword columns from your new sheet
+        
         od_keywords = kw_df['OVERDOSE KEYWORDS'].dropna().astype(str).str.upper().tolist()
         cold_keywords = kw_df['COLD KEYWORDS'].dropna().astype(str).str.upper().tolist()
         heat_keywords = kw_df['HEAT KEYWORDS'].dropna().astype(str).str.upper().tolist()
@@ -413,8 +413,8 @@ if __name__ == "__main__":
         inj_keywords = kw_df['INJURY KEYWORDS'].dropna().astype(str).str.upper().tolist()
         heart_keywords = kw_df['HEART KEYWORDS'].dropna().astype(str).str.upper().tolist()
         comm_keywords = kw_df['COMMUNICABLE DISEASE KEYWORDS'].dropna().astype(str).str.upper().tolist()
-        non_comm_keywords = kw_df['NON-COMMUNICABLE DISEASE KEYWORDS'].dropna().astype(str).str.upper().tolist()
-        illness_keywords = kw_df['ILLNESS KEYWORDS'].dropna().astype(str).str.upper().tolist()
+        non_comm_keywords = kw_df['NON-COMMUNICABLE DISEASE OR ILLNESS KEYWORDS'].dropna().astype(str).str.upper().tolist()
+
 
     except Exception as e:
         print('Exception in Block 2:', e)
@@ -486,7 +486,9 @@ if __name__ == "__main__":
         # Manual review tracking
         all_cause_branches = ['CAUSE_EXTERNAL', 'CAUSE_INTERNAL', 'CAUSE_UNDETERMINED']
         df['MANUAL'] = ~df[all_cause_branches].any(axis=1)
-        
+     
+    except Exception as e:
+      print("Exception in Block 3:", e)   
 
     try:
         df['COD'] = 0
@@ -573,7 +575,7 @@ test_output1%>%
   count() #13677
 
 
-test_output1 %>%
+sample_output_adapted_algorithm %>%
   summarise(across(
     all_of(cause_vars),
     ~ sum(. == TRUE, na.rm = TRUE)
@@ -586,53 +588,28 @@ test_output1 %>%
   arrange(desc(n_true))
 
 
-tblnone1_edited<-cod_output1_edited%>%
-  filter(!if_any(all_of(cod_vars), ~ . == TRUE)) 
 
 
-tblnone1_edited%>%group_by(MANNER)%>%count()
-tblnone1_edited %>% 
+sample_output_adapted_algorithm%>%group_by(MANNER)%>%count()
+sample_output_adapted_algorithm %>% 
   group_by(MANNER) %>% 
   summarise(n = n()) %>% 
   arrange(desc(n))
 
-tblnone1desc_edited<-tblnone1_edited %>% 
-  group_by(CAUSE) %>% 
-  summarise(n = n()) %>% 
-  arrange(desc(n))
-
-tbl1has_edited<-cod_output1_edited%>%
-  filter(if_any(all_of(cod_vars), ~ . == TRUE)) 
-
-
-tbl1has_edited %>% 
+sample_output_adapted_algorithm%>% 
   group_by(MANNER) %>% 
   summarise(n = n()) %>% 
   arrange(desc(n))
 
 
-tbl1has_edited %>% 
+sample_output_adapted_algorithm %>% 
   group_by(CAUSE) %>% 
   summarise(n = n()) %>% 
   arrange(desc(n))
 
 
-cod_output1%>%group_by(MANUAL)%>%count()
-cod_output1_edited%>%group_by(MANUAL)%>%count()
+sample_output_adapted_algorithm%>%group_by(MANUAL)%>%count()
 
-prelimvfinal<-cod_output1_edited%>%filter(if_any(all_of(prelim_vars), ~ . == TRUE))%>% filter(!if_any(all_of(final_vars), ~ . == TRUE)) 
-
-prelimvfinal%>%filter(if_any(all_of(manner_vars), ~ . == TRUE))%>%count()
-cod_output1_edited%>%filter(if_any(all_of(manner_vars), ~ . == TRUE))%>%count()
-
-
-#example for paper
-install.packages("clipr")
-
-example<-test_output1 %>%
-  filter(CASE_NUMBER %in% c(5455, 4919))%>%clipr::write_clip()
-
-test_output1%>%group_by(COD)%>%count()
 
 
 ```
