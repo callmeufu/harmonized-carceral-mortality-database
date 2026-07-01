@@ -42,6 +42,9 @@ sample_template <- random_sample %>%
 
 sample_template %>%summarise(n_missing = sum(is.na(MANNER) | MANNER == "")) #10
 sample_template %>%summarise(n_missing = sum(is.na(CAUSE) | CAUSE == "")) #72
+length(unique(random_sample$state_abbrev))
+random_sample%>%group_by(is_doc)%>%count()
+random_sample%>%group_by(is_mci)%>%count()
 
 write_xlsx(sample_template, "sample_template.xlsx")
 ```
@@ -283,10 +286,42 @@ cod_vars <- c(
   "FINAL_ILLNESS_UNK", "FINAL_UNKNOWN",
   "FINAL_UNKNOWN_UNK"
 )
+
+#looking across all
+sample_output_og_algorithm%>%
+  filter(!if_any(all_of(cod_vars), ~ . == TRUE)) %>%
+  count()#60
+
+sample_output_og_algorithm%>%
+  filter(if_any(all_of(cod_vars), ~ . == TRUE)) %>%
+  count() #40
+
 manner_vars <- c(
   "ACCIDENT", "NATURAL", "HOMICIDE", "SUICIDE",
   "UNKNOWN", "PENDING"
 )
+
+#looking across manner 
+sample_output_og_algorithm%>%
+  filter(!if_any(all_of(manner_vars), ~ . == TRUE)) %>%
+  count() #80
+
+sample_output_og_algorithm%>%
+  filter(if_any(all_of(manner_vars), ~ . == TRUE)) %>%
+  count() #20 
+
+sample_output_og_algorithm%>%
+  summarise(across(
+    all_of(manner_vars),
+    ~ sum(. == TRUE, na.rm = TRUE)
+  )) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "n_true"
+  ) %>%
+  arrange(desc(n_true))
+
 cause_vars <- c(
   "PRELIM_OD",
   "PRELIM_HEAT", "PRELIM_COLD",
@@ -304,23 +339,26 @@ cause_vars <- c(
   "FINAL_UNKNOWN_UNK"
 )
 
-sample_output_og_algorithm%>%
-  filter(!if_any(all_of(cod_vars), ~ . == TRUE)) %>%
-  count()#60
+final_cause_vars<- c("FINAL_ACC_OD",
+  "FINAL_ALL_OD", "FINAL_HEAT",
+  "FINAL_HEAT_UNK", "FINAL_COLD",
+  "FINAL_COLD_UNK", "FINAL_OTHER_INJURY",
+  "FINAL_OTHER_INJURY_UNK", "FINAL_HOMICIDE",
+  "FINAL_SUICIDE", "FINAL_HEART",
+  "FINAL_HEART_UNK", "FINAL_ILLNESS",
+  "FINAL_ILLNESS_UNK", "FINAL_UNKNOWN",
+  "FINAL_UNKNOWN_UNK"
+)
 
-sample_output_og_algorithm%>%group_by(MANUAL)%>%count()
+#looking across cause specific 
 
 sample_output_og_algorithm%>%
-  summarise(across(
-    all_of(manner_vars),
-    ~ sum(. == TRUE, na.rm = TRUE)
-  )) %>%
-  pivot_longer(
-    cols = everything(),
-    names_to = "variable",
-    values_to = "n_true"
-  ) %>%
-  arrange(desc(n_true))
+  filter(!if_any(all_of(cause_vars), ~ . == TRUE)) %>%
+  count()#77
+
+sample_output_og_algorithm%>%
+  filter(if_any(all_of(cause_vars), ~ . == TRUE)) %>%
+  count() #23
 
 sample_output_og_algorithm %>%
   summarise(across(
@@ -334,35 +372,66 @@ sample_output_og_algorithm %>%
   ) %>%
   arrange(desc(n_true))
 
+sample_output_og_algorithm%>%
+  filter(if_any(all_of(final_cause_vars), ~ . == TRUE)) %>%
+  count() #4
+
+sample_output_og_algorithm %>%
+  summarise(across(
+    all_of(final_cause_vars),
+    ~ sum(. == TRUE, na.rm = TRUE)
+  )) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "n_true"
+  ) %>%
+  arrange(desc(n_true))%>%head()
+
+#looking at manual column 
+sample_output_og_algorithm%>%group_by(MANUAL)%>%count()
+
+
+
+
+
 
 tblnone1<-sample_output_og_algorithm%>%
   filter(!if_any(all_of(cod_vars), ~ . == TRUE)) 
 
+#types of manners not classified 
 tblnone1%>%group_by(MANNER)%>%count()
 tblnone1 %>% 
   group_by(MANNER) %>% 
   summarise(n = n()) %>% 
   arrange(desc(n))
 
-tblnone1desc<-tblnone1 %>% 
+#types of causes not classified 
+tblnone1 %>% 
   group_by(CAUSE) %>% 
   summarise(n = n()) %>% 
-  arrange(desc(n))
+  arrange(desc(n))%>%head()
 
 tbl1has<-sample_output_og_algorithm%>%
   filter(if_any(all_of(cod_vars), ~ . == TRUE)) 
 
-
+#manners that were classified
 tbl1has %>% 
   group_by(MANNER) %>% 
   summarise(n = n()) %>% 
   arrange(desc(n))
 
-
+#causes that were classified
 tbl1has %>% 
   group_by(CAUSE) %>% 
   summarise(n = n()) %>% 
   arrange(desc(n))
+
+#classified
+
+tbl<-sample_output_og_algorithm%>%
+  filter(if_any(all_of(final_cause_vars), ~ . == TRUE))
+
 
 ```
 
@@ -521,7 +590,7 @@ if __name__ == "__main__":
     df.to_excel('sample_results_adapted_algorithm.xlsx', index=False)
 ```
 
-checking test algorithm output
+checking new algorithm output
 ```{r testingtest}
 sample_output_adapted_algorithm<-read_xlsx("sample_results_adapted_algorithm.xlsx")
 
@@ -569,10 +638,11 @@ cause_vars <- c(
 
 sample_output_adapted_algorithm%>%
   filter(!if_any(all_of(cause_vars), ~ . == TRUE)) %>%
-  count() #36006
-test_output1%>%
+  count() #77
+
+sample_output_adapted_algorithm%>%
   filter(if_any(all_of(cause_vars), ~ . == TRUE)) %>%
-  count() #13677
+  count() #23
 
 
 sample_output_adapted_algorithm %>%
@@ -589,26 +659,40 @@ sample_output_adapted_algorithm %>%
 
 
 
+tblnone1<-sample_output_adapted_algorithm%>%
+  filter(!if_any(all_of(manner_vars), ~ . == TRUE)) 
 
-sample_output_adapted_algorithm%>%group_by(MANNER)%>%count()
-sample_output_adapted_algorithm %>% 
+#types of manners not classified 
+tblnone1%>%group_by(MANNER)%>%count()
+tblnone1 %>% 
+  group_by(MANNER) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n))%>%head()
+
+
+tblnone1<-sample_output_adapted_algorithm%>%
+  filter(!if_any(all_of(cause_vars), ~ . == TRUE)) 
+
+#types of causes not classified 
+tblnone1 %>% 
+  group_by(CAUSE) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n))%>%head()
+
+tbl1has<-sample_output_og_algorithm%>%
+  filter(if_any(all_of(cod_vars), ~ . == TRUE)) 
+
+#manners that were classified
+tbl1has %>% 
   group_by(MANNER) %>% 
   summarise(n = n()) %>% 
   arrange(desc(n))
 
-sample_output_adapted_algorithm%>% 
-  group_by(MANNER) %>% 
-  summarise(n = n()) %>% 
-  arrange(desc(n))
-
-
-sample_output_adapted_algorithm %>% 
+#causes that were classified
+tbl1has %>% 
   group_by(CAUSE) %>% 
   summarise(n = n()) %>% 
   arrange(desc(n))
-
-
-sample_output_adapted_algorithm%>%group_by(MANUAL)%>%count()
 
 
 
