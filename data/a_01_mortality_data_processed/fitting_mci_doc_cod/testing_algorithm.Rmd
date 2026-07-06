@@ -690,9 +690,40 @@ cause_vars <- c(
   "FINAL_ILLNESS_UNK", "FINAL_UNKNOWN",
   "FINAL_UNKNOWN_UNK"
 )
+final_cause_vars<- c("FINAL_ACC_OD",
+  "FINAL_ALL_OD", "FINAL_HEAT",
+  "FINAL_HEAT_UNK", "FINAL_COLD",
+  "FINAL_COLD_UNK", "FINAL_OTHER_INJURY",
+  "FINAL_OTHER_INJURY_UNK", "FINAL_HOMICIDE",
+  "FINAL_SUICIDE", "FINAL_HEART",
+  "FINAL_HEART_UNK", "FINAL_ILLNESS",
+  "FINAL_ILLNESS_UNK", "FINAL_UNKNOWN",
+  "FINAL_UNKNOWN_UNK"
+)
+
 cod_output1%>%
   filter(!if_any(all_of(cod_vars), ~ . == TRUE)) %>%
   count()#25542
+
+cod_output1%>%
+  filter(if_any(all_of(manner_vars), ~ . == TRUE)) %>%
+  count()#12050
+cod_output1%>%
+  filter(if_any(all_of(final_cause_vars), ~ . == TRUE)) %>%
+  count()#3354
+
+
+cod_output1 %>%
+  summarise(across(
+    all_of(final_cause_vars),
+    ~ sum(. == TRUE, na.rm = TRUE)
+  )) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "n_true"
+  ) %>%
+  arrange(desc(n_true))%>%head()
 
 cod_output1%>%group_by(MANUAL)%>%count()
 
@@ -975,6 +1006,43 @@ cod_output1_edited%>%filter(is.na(MANNER) & is.na(CAUSE))%>%count()
 cod_output1_edited%>%filter(is.na(MANNER))%>%count() #7688
 cod_output1_edited%>%filter(is.na(CAUSE))%>%count() #34487 
 
+cod_output1_edited%>%
+  filter(!if_any(all_of(cod_vars), ~ . == TRUE)) %>%
+  count()#25542
+
+cod_output1_edited%>%
+  filter(if_any(all_of(manner_vars), ~ . == TRUE)) %>%
+  count()#12050
+cod_output1_edited%>%
+  filter(if_any(all_of(final_cause_vars), ~ . == TRUE)) %>%
+  count()#3367
+
+
+cod_output1_edited %>%
+  summarise(across(
+    all_of(final_cause_vars),
+    ~ sum(. == TRUE, na.rm = TRUE)
+  )) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "n_true"
+  ) %>%
+  arrange(desc(n_true))%>%head()
+
+cod_output1%>%group_by(MANUAL)%>%count()
+
+cod_output1 %>%
+  summarise(across(
+    all_of(manner_vars),
+    ~ sum(. == TRUE, na.rm = TRUE)
+  )) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "n_true"
+  ) %>%
+  arrange(desc(n_true))
 
 cod_output1_edited%>%
   filter(!if_any(all_of(cod_vars), ~ . == TRUE)) %>%

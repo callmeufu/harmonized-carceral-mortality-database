@@ -21,10 +21,32 @@ library(ggplot2)
 
 
 combined<-read.csv("fitting_mci_doc_cod/mci_doc_combined.csv")
+
+combined %>% filter(!is.na(cause_of_death), cause_of_death != "")%>%count()
+
+cause_spec<-c("illspec",
+      "drugspec",
+      "homispec",
+      "suicspec",
+      "selfspec",
+      "accspec",
+      "otherspec",
+      "cause_specific")
+
+combined %>%
+  filter(!is.na(cause_specific), cause_specific != "") %>%
+  count()
+
+combined %>%
+  filter(cause_of_death != "") %>%  filter(!is.na(cause_specific), cause_specific != "") %>%
+  count()
+
 ```
 
 ##summary of state data completeness 
 ```{r summarizing data}
+
+
 #checking how many states are represented , finding out all states are
 statetable<-combined%>%group_by(state_abbrev)%>%count()
 
