@@ -46,11 +46,12 @@ combined %>%
     (is.na(accspec)   | accspec == "") &
     (is.na(suicspec)  | suicspec == "") &
     (is.na(homispec)  | homispec == "") &
-    (is.na(otherspec) | otherspec == "")
+    (is.na(otherspec) | otherspec == "") &
+    (is.na(cause_specific) | cause_specific == "")
   ) %>%
   count()
 
-#34487
+#14214
 
 combined %>%
   filter(
@@ -58,11 +59,11 @@ combined %>%
     cause_of_death != "",
     if_any(
       c(illspec, drugspec, selfspec, accspec,
-        suicspec, homispec, otherspec),
+        suicspec, homispec, otherspec, cause_specific),
       ~ !is.na(.) & . != ""
     )
   ) %>%
-  count() #15196 are captured in this 
+  count() #32030 are captured in this 
 ```
 
 
@@ -80,12 +81,13 @@ template1 <- combined %>%
       suicspec,
       selfspec,
       accspec,
-      otherspec
+      otherspec, 
+      cause_specific
     )
   )
 
 template1 %>%summarise(n_missing = sum(is.na(MANNER) | MANNER == "")) #7688
-template1 %>%summarise(n_missing = sum(is.na(CAUSE) | CAUSE == "")) #34487 
+template1 %>%summarise(n_missing = sum(is.na(CAUSE) | CAUSE == "")) #16871 
 
 write_xlsx(template1, "fitting_mci_doc_cod/COD Coding Input template_1.xlsx")
 ```
@@ -100,7 +102,7 @@ import csv
 
 # Constants
 # MEO Entries
-excel_file_name = 'fitting_mci_doc_cod/COD Coding Input template_1.xlsx'
+excel_file_name = 'COD Coding Input template_1.xlsx'
 sub_sheet = 'DATA'
 # Keywords
 keywords_excel = 'final_kw_v1.xlsx'

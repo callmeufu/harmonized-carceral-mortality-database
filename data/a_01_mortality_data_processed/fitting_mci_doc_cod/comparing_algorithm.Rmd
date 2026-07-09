@@ -37,13 +37,14 @@ sample_template <- random_sample %>%
       suicspec,
       selfspec,
       accspec,
-      otherspec
+      otherspec, 
+      cause_specific
     )
   )
 
 sample_template %>%summarise(n_missing = sum(is.na(MANNER) | MANNER == "")) #10
-sample_template %>%summarise(n_missing = sum(is.na(CAUSE) | CAUSE == "")) #72
-sample_output_og_algorithm%>%filter(!is.na(CAUSE))%>%filter(!is.na(MANNER))%>%count()
+sample_template %>%summarise(n_missing = sum(is.na(CAUSE) | CAUSE == "")) #30
+sample_template%>%filter(!is.na(CAUSE))%>%filter(!is.na(MANNER))%>%count()
 length(unique(random_sample$state_abbrev))
 random_sample%>%group_by(is_doc)%>%count()
 random_sample%>%group_by(is_mci)%>%count()
