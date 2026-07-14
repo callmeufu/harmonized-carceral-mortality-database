@@ -16,12 +16,12 @@ py_require("numpy")
 py_require("openpyxl")
 py_require("rapidfuzz")
 
-template<-read_xlsx("COD Coding Input template.xlsx")
-combined<-read.csv("mci_doc_combined.csv")
+template<-read_xlsx("fitting_mci_doc_cod/COD Coding Input template.xlsx")
+combined<-read.csv("fitting_mci_doc_cod/mci_doc_combined.csv")
 
-set.seed(30)
+set.seed(45)
 random_sample <- combined %>% slice_sample(n = 100)
-write_csv(random_sample, "random_sample.csv")
+write_csv(random_sample, "fitting_mci_doc_cod/random_sample.csv")
 ```
 
 ```{r fitting to template}
@@ -42,14 +42,23 @@ sample_template <- random_sample %>%
     )
   )
 
-sample_template %>%summarise(n_missing = sum(is.na(MANNER) | MANNER == "")) #10
-sample_template %>%summarise(n_missing = sum(is.na(CAUSE) | CAUSE == "")) #30
+sample_template %>%summarise(n_missing = sum(is.na(MANNER) | MANNER == "")) #12
+sample_template %>%summarise(n_missing = sum(is.na(CAUSE) | CAUSE == "")) #31
 sample_template%>%filter(!is.na(CAUSE))%>%filter(!is.na(MANNER))%>%count()
 length(unique(random_sample$state_abbrev))
 random_sample%>%group_by(is_doc)%>%count()
 random_sample%>%group_by(is_mci)%>%count()
 
-write_xlsx(sample_template, "sample_template.xlsx")
+#pre-cleaning to fix suicide containing OD 
+sample_template %>%count(MANNER, sort = TRUE)
+
+sample_template$MANNER[sample_template$MANNER == "Suicide (e.g. hanging, knife/cutting instrument, intentional drug overdose) – describe events"] <- "Suicide"
+
+#doing same for aids related illness
+sample_template$MANNER[sample_template$MANNER == "Illness (exclude AIDS-related deaths), specify illness"] <- "Illness"
+
+
+write_xlsx(sample_template, "fitting_mci_doc_cod/sample_template.xlsx")
 ```
 
 ##Putting sample through old algorithm
@@ -1005,6 +1014,335 @@ df.loc[
 df.columns.tolist()
 ```
 
+##putting sample through new algorithm, str 85, and adapted keywords list to match additional respiratory, neuropsych, and cancer categories
+```{python adaptedalgorithm str85 newcategories}
+import pandas as pd
+import numpy as np
+from rapidfuzz import fuzz
+import re
+
+# CONFIG
+
+excel_file_name = "fitting_mci_doc_cod/sample_template.xlsx"
+sub_sheet = "Sheet1"
+
+keywords_excel = "fitting_mci_doc_cod/final_kw_v1.xlsx"
+kw_sub_sheet = "kw_icd_categories"
+
+FUZZY_THRESHOLD = 85
+
+
+# LOAD DATA
+
+df = pd.read_excel(excel_file_name, sheet_name=sub_sheet, engine="openpyxl")
+
+df["CAUSE"] = df["CAUSE"].fillna("").astype(str).str.strip().str.upper()
+df["MANNER"] = df["MANNER"].fillna("").astype(str).str.strip().str.upper()
+
+
+# LOAD KEYWORDS
+
+kw_df = pd.read_excel(keywords_excel, sheet_name=kw_sub_sheet, engine="openpyxl")
+
+def clean(col):
+    return kw_df[col].dropna().astype(str).str.upper().str.strip().tolist()
+
+od_keywords = clean("OVERDOSE KEYWORDS")
+cold_keywords = clean("COLD KEYWORDS")
+heat_keywords = clean("HEAT KEYWORDS")
+suicide_keywords = clean("SUICIDE KEYWORDS")
+homicide_keywords = clean("HOMICIDE KEYWORDS")
+cardio_keywords = clean("CARDIOVASCULAR KEYWORDS")
+resp_keywords = clean("RESPIRATORY KEYWORDS")
+ca_keywords = clean("CANCERS KEYWORDS")
+neuro_keywords = clean("NEUROPSYCHIATRIC KEYWORDS")
+comm_keywords = clean("COMMUNICABLE DISEASE KEYWORDS")
+non_comm_keywords = clean("NONCOMMUNICABLE DISEASE KEYWORDS")
+acc_keywords = clean("ACCIDENTAL KEYWORDS")
+external_keywords = clean("INJURY KEYWORDS")
+internal_keywords = clean("INTERNAL KEYWORDS")
+unk_keywords = clean("UNDETERMINED")
+
+
+# CAUSE/MANNER FALLBACK LOGIC
+
+df["CAUSE_FOR_CLASS"] = df["CAUSE"]
+
+missing_cause = df["CAUSE_FOR_CLASS"].eq("")
+
+df.loc[missing_cause, "CAUSE_FOR_CLASS"] = df.loc[missing_cause, "MANNER"]
+
+df["MANNER_FOR_CLASS"] = df["MANNER"]
+
+missing_manner = df["MANNER_FOR_CLASS"].eq("")
+
+df.loc[missing_manner, "MANNER_FOR_CLASS"] = df.loc[missing_manner, "CAUSE"]
+
+
+# INITIAL FLAGS
+
+flags = [
+    "FINAL_OD",
+    "FINAL_COLD",
+    "FINAL_HEAT",
+    "FINAL_SUICIDE_CAUSE",
+    "FINAL_HOMICIDE_CAUSE",
+    "FINAL_CARDIO",
+    "FINAL_RESP",
+    "FINAL_CA",
+    "FINAL_NEURO",
+    "FINAL_COMM_DISEASE",
+    "FINAL_NON_COMM_DISEASE",
+    "FINAL_ACCIDENTAL_CAUSE",
+    "FINAL_UNDETERMINED",
+    "FINAL_EXTERNAL",
+    "FINAL_INTERNAL"
+]
+
+for f in flags:
+    df[f] = False
+
+
+# HELPERS
+
+def fuzzy(text, kws):
+    if text == "":
+        return False
+    
+    for kw in kws:
+        if fuzz.token_set_ratio(text, kw) >= FUZZY_THRESHOLD:
+            return True
+    
+    return False
+
+
+# CAUSE groups 
+
+
+cause_groups = {
+    "FINAL_OD": od_keywords,
+    "FINAL_COLD": cold_keywords,
+    "FINAL_HEAT": heat_keywords,
+    "FINAL_SUICIDE_CAUSE": suicide_keywords,
+    "FINAL_HOMICIDE_CAUSE": homicide_keywords,
+    "FINAL_CARDIO": cardio_keywords,
+    "FINAL_RESP" : resp_keywords,
+    "FINAL_CA": ca_keywords, 
+    "FINAL_NEURO": neuro_keywords,
+    "FINAL_COMM_DISEASE": comm_keywords,
+    "FINAL_NON_COMM_DISEASE": non_comm_keywords,
+    "FINAL_ACCIDENTAL_CAUSE": acc_keywords,
+    "FINAL_EXTERNAL": external_keywords,
+    "FINAL_INTERNAL": internal_keywords,
+    "FINAL_UNDETERMINED" : unk_keywords
+    
+}
+
+
+# CAUSE matching
+
+df["MATCHED_KEYWORD"] = ""
+df["MATCH_SCORE"] = np.nan
+df["MATCH_TYPE"] = ""
+
+for flag, kws in cause_groups.items():
+
+    # exact matches
+    for kw in kws:
+
+        mask = (
+            df["CAUSE_FOR_CLASS"]
+            .str.contains(
+                rf"\b{re.escape(kw)}\b",
+                na=False,
+                regex=True
+            )
+            &
+            (df["MATCHED_KEYWORD"] == "")
+        )
+
+        df.loc[mask, flag] = True
+        df.loc[mask, "MATCHED_KEYWORD"] = kw
+        df.loc[mask, "MATCH_SCORE"] = 100
+        df.loc[mask, "MATCH_TYPE"] = "Exact"
+
+
+    # fuzzy fallback
+    mask = (df[flag] == False) & (df["MATCHED_KEYWORD"] == "")
+
+    for idx, text in df.loc[mask, "CAUSE_FOR_CLASS"].items():
+
+        best_kw = None
+        best_score = 0
+
+        for kw in kws:
+            score = fuzz.token_set_ratio(text, kw)
+
+            if score > best_score:
+                best_score = score
+                best_kw = kw
+
+        if best_score >= FUZZY_THRESHOLD:
+
+            df.loc[idx, flag] = True
+            df.loc[idx, "MATCHED_KEYWORD"] = best_kw
+            df.loc[idx, "MATCH_SCORE"] = best_score
+            df.loc[idx, "MATCH_TYPE"] = "Fuzzy"
+
+# MANNER FLAGS
+
+df["MANNER_HOMICIDE"] = df["MANNER_FOR_CLASS"].apply(
+    lambda x: fuzz.token_set_ratio(x, "HOMICIDE") >= FUZZY_THRESHOLD
+)
+
+df["MANNER_SUICIDE"] = df["MANNER_FOR_CLASS"].apply(
+    lambda x: fuzz.token_set_ratio(x, "SUICIDE") >= FUZZY_THRESHOLD
+)
+
+df["MANNER_ACCIDENTAL"] = df["MANNER_FOR_CLASS"].apply(
+    lambda x: fuzz.token_set_ratio(x, "ACCIDENTAL") >= FUZZY_THRESHOLD
+)
+
+df["MANNER_NATURAL"] = df["MANNER_FOR_CLASS"].apply(
+    lambda x: (
+        fuzz.token_set_ratio(x, "NATURAL") >= FUZZY_THRESHOLD
+        or 
+        fuzz.token_set_ratio(x, "ILLNESS") >= FUZZY_THRESHOLD
+    )
+)
+
+df["MANNER_UNKNOWN"] = df["MANNER_FOR_CLASS"].apply(
+    lambda x: (
+        fuzz.token_set_ratio(x, "UNKNOWN") >= FUZZY_THRESHOLD
+        or
+        fuzz.token_set_ratio(x, "UNDETERMINED") >= FUZZY_THRESHOLD
+    )
+)
+
+# CAUSE STRUCTURE
+
+
+df["FINAL_NON_COMM_DISEASE"] = (
+    df["FINAL_NON_COMM_DISEASE"] |
+    df["FINAL_CARDIO"] |
+    df["FINAL_RESP"] |
+    df["FINAL_CA"] |
+    df["FINAL_NEURO"]
+)
+
+
+df["FINAL_CAUSE_ACCIDENTAL"] = (
+    df["FINAL_ACCIDENTAL_CAUSE"] | 
+    df["FINAL_OD"] |
+    df["FINAL_COLD"] |
+    df["FINAL_HEAT"] 
+)
+
+df["FINAL_CAUSE_INTENTIONAL"] = (
+    df["FINAL_SUICIDE_CAUSE"] |
+    df["FINAL_HOMICIDE_CAUSE"]
+)
+
+
+df["FINAL_EXTERNAL"] = (
+    df["FINAL_EXTERNAL"] |  
+    df["FINAL_CAUSE_ACCIDENTAL"] |
+    df["FINAL_CAUSE_INTENTIONAL"]
+)
+
+df["FINAL_INTERNAL"] = (
+    df["FINAL_INTERNAL"] |
+    df["FINAL_COMM_DISEASE"] |
+    df["FINAL_NON_COMM_DISEASE"]
+)
+
+df["CAUSE_UNDETERMINED"] = df["FINAL_UNDETERMINED"]
+
+
+# MANUAL FLAG
+
+df["MANUAL"] = ~(
+    df["FINAL_EXTERNAL"] |
+    df["FINAL_INTERNAL"] |
+    df["FINAL_UNDETERMINED"]
+)
+
+# COD ASSIGNMENT
+
+df["COD"] = 0
+
+df.loc[df["FINAL_UNDETERMINED"], "COD"] = 99
+df.loc[df["MANUAL"], "COD"] = 0
+df.loc[df["FINAL_OD"], "COD"] = 1
+df.loc[df["FINAL_COLD"], "COD"] = 2
+df.loc[df["FINAL_HEAT"], "COD"] = 3
+df.loc[df["FINAL_SUICIDE_CAUSE"], "COD"] = 4
+df.loc[df["FINAL_HOMICIDE_CAUSE"], "COD"] = 5
+df.loc[df["FINAL_CARDIO"], "COD"] = 6
+df.loc[df["FINAL_RESP"], "COD"] = 7
+df.loc[df["FINAL_CA"], "COD"] = 8
+df.loc[df["FINAL_NEURO"], "COD"] = 9
+df.loc[df["FINAL_COMM_DISEASE"], "COD"] = 10
+df.loc[df["FINAL_NON_COMM_DISEASE"], "COD"] = 11
+df.loc[df["FINAL_CAUSE_ACCIDENTAL"], "COD"] = 12
+df.loc[df["FINAL_EXTERNAL"], "COD"] = 13
+df.loc[df["FINAL_INTERNAL"], "COD"] = 14
+
+
+# FINAL STRING OUTPUT COLUMNS
+
+def get_final_manner(row):
+    if row["MANNER_SUICIDE"]:
+        return "SUICIDE"
+    if row["MANNER_HOMICIDE"]:
+        return "HOMICIDE"
+    if row["MANNER_ACCIDENTAL"]:
+        return "ACCIDENTAL"
+    if row["MANNER_NATURAL"]:
+        return "NATURAL"
+    if row["MANNER_UNKNOWN"]:
+        return "UNKNOWN"
+    return "UNKNOWN"
+
+
+def get_final_cause(row):
+    if row["FINAL_OD"]:
+        return "OVERDOSE"
+    if row["FINAL_COLD"]:
+        return "COLD"
+    if row["FINAL_HEAT"]:
+        return "HEAT"
+    if row["FINAL_SUICIDE_CAUSE"]:
+        return "SUICIDE"
+    if row["FINAL_HOMICIDE_CAUSE"]:
+        return "HOMICIDE"
+    if row["FINAL_CARDIO"]:
+        return "CARDIOVASCULAR DISEASE"
+    if row["FINAL_RESP"]:
+        return "RESPIRATORY DISEASE"
+    if row["FINAL_CA"]:
+        return "CANCER"
+    if row["FINAL_NEURO"]:
+        return "NEUROPSYCHIATRIC ILLNESS"
+    if row["FINAL_COMM_DISEASE"]:
+        return "COMMUNICABLE DISEASE"
+    if row["FINAL_NON_COMM_DISEASE"]:
+        return "NON-COMMUNICABLE DISEASE"
+    if row["FINAL_CAUSE_ACCIDENTAL"]:
+        return "ACCIDENTAL"
+    if row["FINAL_EXTERNAL"]:
+        return "EXTERNAL"
+    if row["FINAL_INTERNAL"]:
+        return "INTERNAL"
+    if row["FINAL_UNDETERMINED"]:
+        return "UNDETERMINED"
+    return "UNDETERMINED"
+
+df["FINAL_MANNER_TEXT"] = df.apply(get_final_manner, axis=1)
+df["FINAL_CAUSE_TEXT"] = df.apply(get_final_cause, axis=1)
+
+
+df.to_excel("fitting_mci_doc_cod/sample_results_ICD.xlsx", index=False)
 
 
 ```

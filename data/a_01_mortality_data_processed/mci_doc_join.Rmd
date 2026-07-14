@@ -22,6 +22,38 @@ mci<-read.csv("mci_2016_2019_04062026.csv")
 doc<-read.csv("state_docs_excl_2016_to_2019_04082026.csv")
 ```
 
+exploring missingness in each dataset
+```{r missingness}
+#mci
+causespec<-c("illspec",
+      "drugspec",
+      "homispec",
+      "suicspec",
+      "selfspec",
+      "accspec",
+      "otherspec")
+
+mci %>%
+  filter(if_all(all_of(causespec), ~ is.na(.) | . == "" | . == "Undetermined")) %>%
+  count()
+#293
+
+commoncausespec<-mci %>% count(across(all_of(causespec)))%>%arrange(desc(n))
+
+mci %>%
+  filter(if_all(all_of(causespec), ~ is.na(.) | . == "" | . == "Undetermined")) %>%
+  count(state_abbrev, sort = TRUE)
+
+#AL has the most missingness (86), followed by FL (42) then OR (23)
+
+mci%>%count(state_abbrev, sort = TRUE)
+#and the missingness patterns are not the same/proportional to the # of vals from each state
+
+#doc 
+
+
+```
+
 exploring and cleaning mci
 ```{r mci}
 #codebook vals
