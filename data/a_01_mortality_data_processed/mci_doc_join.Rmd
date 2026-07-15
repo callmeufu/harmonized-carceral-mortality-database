@@ -23,7 +23,9 @@ doc<-read.csv("state_docs_excl_2016_to_2019_04082026.csv")
 ```
 
 exploring missingness in each dataset
-```{r missingness}
+
+#mci missingness
+```{r mcimissingness}
 #mci
 causespec<-c("illspec",
       "drugspec",
@@ -34,11 +36,21 @@ causespec<-c("illspec",
       "otherspec")
 
 mci %>%
+  filter(if_all(all_of(causespec), ~ is.na(.) | . == "" )) %>%
+  count()
+#273 completely missing (blank)
+
+mci %>%
   filter(if_all(all_of(causespec), ~ is.na(.) | . == "" | . == "Undetermined")) %>%
   count()
 #293
 
 commoncausespec<-mci %>% count(across(all_of(causespec)))%>%arrange(desc(n))
+
+mci %>%
+  filter(if_all(all_of(causespec), ~ is.na(.) | . == "")) %>%
+  count(state_abbrev, sort = TRUE)
+#AL has the most missingness (86), followed by FL (31) then OR (22)
 
 mci %>%
   filter(if_all(all_of(causespec), ~ is.na(.) | . == "" | . == "Undetermined")) %>%
@@ -48,9 +60,20 @@ mci %>%
 
 mci%>%count(state_abbrev, sort = TRUE)
 #and the missingness patterns are not the same/proportional to the # of vals from each state
+```
 
+#doc missingness
+```{r docmissingness}
 #doc 
+doc%>%filter(is.na(cause_specific)| cause_specific == "")%>%count()
+#13941 missing (completely blank) from the DOC database
 
+doc%>%group_by(cause_specific)%>%count()%>%arrange(desc(n))
+
+
+doc %>%
+filter(is.na(cause_specific)| cause_specific == "") %>%
+  count(state_abbrev, sort = TRUE)
 
 ```
 
