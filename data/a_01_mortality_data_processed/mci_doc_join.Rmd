@@ -14,6 +14,9 @@ library(tidyverse)
 library(readxl)
 library(readr)
 library(lubridate)
+library(writexl)
+library(reticulate)
+library(ggplot2)
 ```
 
 
@@ -77,9 +80,10 @@ filter(is.na(cause_specific)| cause_specific == "") %>%
 
 ```
 
-exploring and cleaning mci
-```{r mci}
+cleaning mci
+```{r mcicleaning}
 #codebook vals
+
 #lname (dont have)
 #fname (dont have)
 #mname (dont have)
@@ -260,10 +264,119 @@ combined<-combined%>%select(-Dobmon, -Dobday, -Dobyear, -Deathmon, -Deathday, -Y
 write.csv(combined, "mci_doc_combined.csv")
 ```
 
-exploring the combined category
+exploring combined
 ```{r combined}
-combined%>%group_by(cause_of_death)%>%count()
+combined %>% filter(!is.na(cause_of_death), cause_of_death != "")%>%count()
 
-#there are a lot
+cause_spec<-c("illspec",
+      "drugspec",
+      "homispec",
+      "suicspec",
+      "selfspec",
+      "accspec",
+      "otherspec",
+      "cause_specific")
 
+combined %>%
+  filter(!is.na(cause_specific), cause_specific != "") %>%
+  count()
+
+combined %>%
+  filter(cause_of_death != "") %>%  filter(!is.na(cause_specific), cause_specific != "") %>%
+  count()
+
+```
+
+##summary of state data completeness 
+```{r summarizing data}
+
+
+#checking how many states are represented , finding out all states are
+statetable<-combined%>%group_by(state_abbrev)%>%count()
+
+#checking out how many unique facilities are represented, 1089 are 
+facilitiestable<-combined%>%group_by(facilityid)%>%count()
+
+#reorganizing death date as a Date str 
+str(combined$death_date_dt)
+
+combined$death_date_dt<-as.Date(combined$death_date_dt)
+
+str(combined$death_date_dt)
+
+#comparing # of mortality records across years 
+combined<-combined%>%mutate(year=year(death_date_dt))
+
+deaths_by_year<-combined%>%group_by(year)%>%count()
+
+
+ggplot(combined, aes(x =year, y = fct_reorder(state_abbrev, year, .fun = min, .desc = TRUE))) +
+  geom_tile(fill = "black", width = 1, height = 0.75) + 
+  scale_y_discrete(limits = rev) + 
+  scale_x_continuous(breaks = seq(1996, 2024, by = 4)) +
+  theme_minimal() +
+  theme(
+    panel.grid.major.y = element_blank(),     
+    panel.grid.minor = element_blank(),       
+    panel.grid.major.x = element_line(color = "lightgray"), 
+    plot.title = element_text(face = "bold", hjust = 0)
+  ) +
+  labs(
+    title = "Temporal Coverage of Incarcerated Mortality Data by State", 
+    x = "Year", 
+    y = "State"
+  )
+
+```
+
+##summarizing across time (2013-2019 according to the plot)
+```{r summarizingtime}
+library(dplyr)
+library(ggplot2)
+
+states20132019<- combined %>% filter(year >=2013 & year<=2019)%>%group_by(state_abbrev)%>%summarize(years_covered = n_distinct(year))%>%filter(years_covered==7)%>%pull(state_abbrev)
+  
+filtered_states <- combined %>%
+  filter(state_abbrev %in% states20132019) %>% filter(year >=2013 & year<=2019)
+
+yearly_comparison <- filtered_states %>%
+  group_by(year) %>%
+  summarize(total_records = n())
+```
+
+#by climate region
+```{r climateregion}
+
+climateregions <- combined %>%
+  mutate(
+    climate_region = case_when(
+      state_abbrev %in% c("CT", "DE", "ME", "MD", "MA", "NH", "NJ", "NY", "PA", "RI", "VT") ~ "Northeast",
+      state_abbrev %in% c("IA", "MI", "MN", "WI")                                         ~ "Upper Midwest",
+      state_abbrev %in% c("IL", "IN", "KY", "MO", "OH", "TN", "WV")                       ~ "Ohio Valley",
+      state_abbrev %in% c("AL", "FL", "GA", "NC", "SC", "VA")                             ~ "Southeast",
+      state_abbrev %in% c("MT", "NE", "ND", "SD", "WY")                                   ~ "Northern Rockies and Plains",
+      state_abbrev %in% c("AR", "KS", "LA", "MS", "OK", "TX")                             ~ "South",
+      state_abbrev %in% c("AZ", "CO", "NM", "UT")                                         ~ "Southwest",
+      state_abbrev %in% c("ID", "OR", "WA")                                               ~ "Northwest",
+      state_abbrev %in% c("CA", "NV")                                                     ~ "West",
+      TRUE ~ "Unknown/Other"
+    )
+  )
+
+
+region_analysis <- climateregions %>%
+  group_by(climate_region) %>% 
+  summarise(
+    earliest_year = min(year, na.rm = TRUE),
+    total_deaths  = n()  # This counts the actual rows/deaths in each region
+  )
+            
+```
+
+#demographics
+```{r race and age}
+combined%>%group_by(race)%>%count()
+
+sum(is.na(combined$age))
+summary(combined$age)
 ```
