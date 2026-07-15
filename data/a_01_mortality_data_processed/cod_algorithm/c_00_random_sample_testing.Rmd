@@ -719,7 +719,6 @@ tbl<-sample_output_adapted_algorithm%>%
 ```
 
 ## putting sample through new algorithm with different string distance 
-
 ```{python newstrdist}
 import pandas as pd
 import numpy as np
