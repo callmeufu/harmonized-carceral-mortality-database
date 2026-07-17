@@ -19,9 +19,10 @@ library(reticulate)
 py_require("pandas")
 py_require("numpy")
 py_require("openpyxl")
+py_require("rapidfuzz")
 
-template<-read_xlsx("fitting_mci_doc_cod/COD Coding Input template.xlsx")
-combined<-read.csv("fitting_mci_doc_cod/mci_doc_combined.csv")
+template<-read_xlsx("cod_algorithm/COD Coding Input template.xlsx")
+combined<-readRDS("~/Documents/GitHub/harmonized_carceral_mortality_data/data/hcmd.rds")
 
 ```
 
@@ -37,30 +38,31 @@ combined%>%filter(is.na(cause_of_death))%>%count() #7688
 
 combined %>%
   filter(
-    (is.na(illspec)   | illspec == "") &
-    (is.na(drugspec)  | drugspec == "") &
-    (is.na(selfspec)  | selfspec == "") &
-    (is.na(accspec)   | accspec == "") &
-    (is.na(suicspec)  | suicspec == "") &
-    (is.na(homispec)  | homispec == "") &
-    (is.na(otherspec) | otherspec == "") &
-    (is.na(cause_specific) | cause_specific == "")
+    (is.na(illspec)   | illspec == ""| illspec == NaN) &
+    (is.na(drugspec)  | drugspec == ""| drugspec == NaN) &
+    (is.na(selfspec)  | selfspec == ""  | selfspec == NaN) &
+    (is.na(accspec)   | accspec == ""| accspec == NaN) &
+    (is.na(suicspec)  | suicspec == ""| suicspec == NaN) &
+    (is.na(homispec)  | homispec == ""| homispec == NaN) &
+    (is.na(otherspec) | otherspec == ""| otherspec == NaN) &
+    (is.na(cause_specific) | cause_specific == ""| cause_specific == NaN)
   ) %>%
   count()
 
 #14214
 
+
 combined %>%
   filter(
-    !is.na(cause_of_death),
-    cause_of_death != "",
+    !is.na(cause_general),
+    cause_general != "",
     if_any(
       c(illspec, drugspec, selfspec, accspec,
         suicspec, homispec, otherspec, cause_specific),
       ~ !is.na(.) & . != ""
     )
   ) %>%
-  count() #32030 are captured in this 
+  count() #41994 are captured in this 
 ```
 
 
@@ -68,10 +70,10 @@ fitting combined into template 1 where manner = COD general and cause= COD speci
 ```{r fitting}
 template1 <- combined %>%
   transmute(
-    CASE_NUMBER = X,
-    MANNER = cause_of_death,
+    CASE_NUMBER = nr,
+    CAUSE_GENERAL = cause_general,
 
-   CAUSE = coalesce(
+   CAUSE_SPECIFIC = coalesce(
       illspec,
       drugspec,
       homispec,
@@ -83,10 +85,13 @@ template1 <- combined %>%
     )
   )
 
-template1 %>%summarise(n_missing = sum(is.na(MANNER) | MANNER == "")) #7688
-template1 %>%summarise(n_missing = sum(is.na(CAUSE) | CAUSE == "")) # 14214
 
-write_xlsx(template1, "fitting_mci_doc_cod/COD Coding Input template_1.xlsx")
+
+template1 %>%summarise(n_missing = sum(is.na(CAUSE_GENERAL) | CAUSE_GENERAL == "")) #7688
+template1 %>%summarise(n_missing = sum(is.na(CAUSE_SPECIFIC) | CAUSE_SPECIFIC == ""|CAUSE_SPECIFIC==NaN)) #37143
+
+
+write_xlsx(template1, "cod_algorithm/COD Coding Input template_1.xlsx")
 ```
 
 
@@ -99,10 +104,10 @@ import re
 
 # CONFIG
 
-excel_file_name = "fitting_mci_doc_cod/COD Coding Input template_1.xlsx"
+excel_file_name = "cod_algorithm/COD Coding Input template_1.xlsx"
 sub_sheet = "Sheet1"
 
-keywords_excel = "fitting_mci_doc_cod/final_kw_v1.xlsx"
+keywords_excel = "cod_algorithm/final_kw_v1.xlsx"
 kw_sub_sheet = "kw_icd_categories"
 
 FUZZY_THRESHOLD = 85
@@ -112,8 +117,8 @@ FUZZY_THRESHOLD = 85
 
 df = pd.read_excel(excel_file_name, sheet_name=sub_sheet, engine="openpyxl")
 
-df["CAUSE"] = df["CAUSE"].fillna("").astype(str).str.strip().str.upper()
-df["MANNER"] = df["MANNER"].fillna("").astype(str).str.strip().str.upper()
+df["CAUSE"] = df["CAUSE_GENERAL"].fillna("").astype(str).str.strip().str.upper()
+df["MANNER"] = df["CAUSE_SPECIFIC"].fillna("").astype(str).str.strip().str.upper()
 
 
 # LOAD KEYWORDS
@@ -418,7 +423,7 @@ df["FINAL_MANNER_TEXT"] = df.apply(get_final_manner, axis=1)
 df["FINAL_CAUSE_TEXT"] = df.apply(get_final_cause, axis=1)
 
 
-df.to_excel("fitting_mci_doc_cod/full_results_ICD.xlsx", index=False)
+df.to_excel("cod_algorithm/full_results_ICD.xlsx", index=False)
 
 
 ```

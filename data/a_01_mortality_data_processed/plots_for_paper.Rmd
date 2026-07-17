@@ -1,0 +1,60 @@
+---
+title: "plots for paper"
+output: html_document
+date: "2026-07-16"
+editor_options: 
+  chunk_output_type: console
+---
+
+
+
+```{r libraries and data}
+library(tidyverse)
+library(ggplot2)
+library(stats)
+library(tidyr)
+library(dplyr)
+
+hcmd <- readRDS("~/Documents/GitHub/harmonized_carceral_mortality_data/data/hcmd.rds")
+
+```
+
+Timing of deaths Figure: Mean + StDev (dot and whisker) of Deaths by Month across all years (x axis is month, y axis is # of deaths)
+
+```{r timingofdeaths}
+
+
+
+
+monthly_summary <- hcmd %>%
+  count(year, death_month, name = "deaths") %>%
+  group_by(death_month) %>%
+  summarise(
+    mean_deaths = mean(deaths),
+    sd_deaths = sd(deaths),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    death_month = factor(month.abb[death_month], levels = month.abb)
+  )
+
+monthly_summary$death_month <- factor(
+  monthly_summary$death_month,
+  levels = month.abb
+)
+
+dotandwhisker<-ggplot(monthly_summary, aes(x = death_month, y = mean_deaths)) +
+  geom_errorbar(aes(ymin = mean_deaths - sd_deaths,
+                    ymax = mean_deaths + sd_deaths),
+                width = 0.2) +
+  geom_point(size = 3) +
+  labs(
+    x = "Month",
+    y = "Mean Number of Deaths",
+    title = "Mean Monthly Deaths Across Years (1996-2024)"
+  ) +
+  theme_classic()
+
+
+```
+

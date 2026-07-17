@@ -41,7 +41,7 @@ causespec<-c("illspec",
 mci %>%
   filter(if_all(all_of(causespec), ~ is.na(.) | . == "" )) %>%
   count()
-#273 completely missing (blank)
+#273 completely missing (blank) (2%) 
 
 mci %>%
   filter(if_all(all_of(causespec), ~ is.na(.) | . == "" | . == "Undetermined")) %>%
@@ -69,7 +69,7 @@ mci%>%count(state_abbrev, sort = TRUE)
 ```{r docmissingness}
 #doc 
 doc%>%filter(is.na(cause_specific)| cause_specific == "")%>%count()
-#13941 missing (completely blank) from the DOC database
+#13941 missing (completely blank) from the DOC database (41%)
 
 doc%>%group_by(cause_specific)%>%count()%>%arrange(desc(n))
 
@@ -77,6 +77,8 @@ doc%>%group_by(cause_specific)%>%count()%>%arrange(desc(n))
 doc %>%
 filter(is.na(cause_specific)| cause_specific == "") %>%
   count(state_abbrev, sort = TRUE)
+
+doc %>%count(state_abbrev, sort = TRUE)
 
 ```
 
