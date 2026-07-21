@@ -1,10 +1,10 @@
 # Harmonized Carceral Mortality Database (HCMD)
 
-The Harmonized Carceral Mortality Database (HCMD) is a unified, georeferenced dataset of deaths occurring in U.S. state-operated correctional facilities. It is compiled and harmonized from multiple administrative, nonprofit, and public-records sources. The HCMD standardizes decedent characteristics, facility identifiers, dates of death, and causes of death to enable consistent epidemiologic analyses of custodial mortality in the United States, independent of federal reporting programs.
+The Harmonized Carceral Mortality Database (HCMD) is a unified, georeferenced dataset of deaths occurring in U.S. state-operated correctional facilities. It is compiled and harmonized from multiple administrative, nonprofit, and public-records sources. The HCMD standardizes decedent characteristics, facility identifiers, dates of death, and causes of death to enable more consistent epidemiologic analyses of custodial mortality in the United States, independent of federal reporting programs.
 
 The dataset currently includes: 
 
-- **49,682** mortality records; XX% (n = XX) have algorithmically estimated cause of death
+- **49,682** mortality records; 77.7% (n = 39,736) have algorithmically estimated cause of death
 - All 50 states have at least some records available
 - Temporal coverage **March 1996 – December 2024** varies by state
 - **1,089** unique carceral facilities represented
@@ -21,7 +21,7 @@ In response, researchers and nonprofits — including the [UCLA Law Behind Bars 
 
 ## Methods
 
-Full methodological detail is available in the accompanying data descriptor paper. In brief:
+Full methodological detail is available in the accompanying data descriptor paper [INSERT LINK]. In brief:
 
 ### Data Sources
 
@@ -34,7 +34,7 @@ A full list of source datasets and their coverage is documented in Table 1 of ou
 ### Compilation & Deduplication
 When multiple sources reported records for the same state and overlapping time period, the more "authoritative"[^1] source (state or federal government agencies) was prioritized over nonprofit or third-party compilations. Column names were standardized across all sources (e.g., decedent name, state, age, sex, death date), and death dates were split into separate year/month/day columns. Cause-of-death information, which varied widely in specificity, was split into `cause_general` and `cause_specific` fields.
 
-[^1]: We recognize that "authoritative" here does not necessarily imply accurate or truthful
+[^1]: "authoritative" here does not necessarily imply accurate or truthful. We use "authoritative" to indicate the provenance of the data is closer to the source
 
 ### Facility Standardization & Geolocation
 Facility names and abbreviations varied substantially both across and within sources (e.g., "Cross City C.I.", "Cross City", "CCCI"). A manually built, state-specific crosswalk dictionary (`all_facility_dictionaries.py`) maps these variants to canonical facility names and IDs from the [HIFLD Prison Boundaries](https://hifld-geoplatform.hub.arcgis.com/) dataset, the most comprehensive available source on U.S. correctional facility locations.
@@ -64,7 +64,7 @@ Records were geocoded using `geopy`, querying ArcGIS's World Geocoding service f
 Standardized dictionaries were built to harmonize inconsistent source values for sex and race/ethnicity. Age was computed from date of birth and date of death when both were available (`age_from_dates`), supplementing reported age where present.
 
 ### Cause of Death Coding
-Free-text and categorical cause-of-death fields were processed using a keyword-matching algorithm adapted from McCord et al. (2025), extended with carceral-specific terminology (e.g., additional overdose-related keywords) and reviewed by a physician with experience in correctional health. The algorithm assigns both a Manner of Death and a Cause of Death to each record where possible.
+Free-text and categorical cause-of-death fields were processed using a keyword-matching algorithm adapted from McCord et al. (2025), extended with carceral-specific terminology (e.g., additional overdose-related keywords) and reviewed by a physician with experience in correctional health [UPDATE BASED ON ACTUAL VALIDATION PROTOCOL]. The algorithm assigns both a Manner of Death and a Cause of Death to each record where possible.
 
 ### Exclusions
 Records were excluded from the final database if they lacked location or spatial data, lacked a recorded date of death, or represented executions rather than deaths from other causes.
@@ -75,18 +75,24 @@ Key columns in the harmonized dataset include:
 
 | Column | Description |
 |---|---|
-| `state_abbrev` | State postal abbreviation |
+| `nr` | unique identifier for each decedent |
 | `death_date_dt` | Date of death |
-| `hifld_name` | Canonical HIFLD facility name |
-| `facility_name` | Facility name as it appeared on the original mortality record |
-| `hifld_address`, `hifld_city` | Facility location per HIFLD |
-| `facility_address`, `city` | Address/city as reported on the original record |
-| `facilityid` | Unique identifier for each carceral facility |
-| `match_method` | Method used to link the record to a HIFLD facility (see table above) |
+| `state_abbrev` | State postal abbreviation |
 | `latitude`, `longitude` | Geocoded location of death |
+| `match_method` | Method used to link the record to a HIFLD facility (see table above) |
+| `hifld_facilityid` | Unique identifier for each carceral facility |
+| `hifld_name` | Canonical HIFLD facility name |
+| `hifld_address`, `hifld_city` | Facility location per HIFLD |
+| `facility_name` | Facility name as it appeared on the *original* mortality record |
+| `facility_address`, `city` | Address/city as reported on the original record |
 | `sex`, `race` | Standardized decedent demographics |
 | `date_of_birth`, `age`, `age_from_dates` | Decedent age (reported and/or computed) |
-| `cause_of_death`, `cause_specific` | General and specific cause-of-death information |
+| `final_cause` | Algorithm-classified cause-of-death information based on `cause_general` and `cause_specific` columns|
+| `level1` | General and specific cause-of-death information |
+| `level2` | General and specific cause-of-death information |
+| `level3` | General and specific cause-of-death information |
+| `keyword_matched` | General and specific cause-of-death information |
+| `cause_general`, `cause_specific` | General and specific cause-of-death information |
 | `illspec`, `drugspec`, `selfspec`, `accspec`, `suicspec`, `homispec`, `otherspec`, `place`, `evaluate`, `cause` | MCI codebook–defined cause-of-death detail fields |
 | `is_mci`, `is_doc` | Indicators of source program (federal MCI vs. state DOC) |
 
