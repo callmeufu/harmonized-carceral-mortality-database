@@ -63,6 +63,9 @@ combined %>%
     )
   ) %>%
   count() #41994 are captured in this 
+
+
+
 ```
 
 
@@ -89,6 +92,14 @@ template1 <- combined %>%
 
 template1 %>%summarise(n_missing = sum(is.na(CAUSE_GENERAL) | CAUSE_GENERAL == "")) #7688
 template1 %>%summarise(n_missing = sum(is.na(CAUSE_SPECIFIC) | CAUSE_SPECIFIC == ""|CAUSE_SPECIFIC==NaN)) #37143
+
+#pre-cleaning to fix suicide containing OD 
+template1 %>%count(CAUSE_GENERAL, sort = TRUE)
+
+template1$CAUSE_GENERAL[template1$CAUSE_GENERAL == "Suicide (e.g. hanging, knife/cutting instrument, intentional drug overdose) – describe events"] <- "Suicide"
+
+#doing same for aids related illness
+template1$CAUSE_GENERAL[template1$CAUSE_GENERAL == "Illness (exclude AIDS-related deaths), specify illness"] <- "Illness"
 
 
 write_xlsx(template1, "cod_algorithm/COD Coding Input template_1.xlsx")
@@ -137,6 +148,7 @@ cardio_keywords = clean("CARDIOVASCULAR KEYWORDS")
 resp_keywords = clean("RESPIRATORY KEYWORDS")
 ca_keywords = clean("CANCERS KEYWORDS")
 neuro_keywords = clean("NEUROPSYCHIATRIC KEYWORDS")
+covid_keywords = clean("COVID-19 KEYWORDS")
 comm_keywords = clean("COMMUNICABLE DISEASE KEYWORDS")
 non_comm_keywords = clean("NONCOMMUNICABLE DISEASE KEYWORDS")
 acc_keywords = clean("ACCIDENTAL KEYWORDS")
@@ -172,6 +184,7 @@ flags = [
     "FINAL_RESP",
     "FINAL_CA",
     "FINAL_NEURO",
+    "FINAL_COVID",
     "FINAL_COMM_DISEASE",
     "FINAL_NON_COMM_DISEASE",
     "FINAL_ACCIDENTAL_CAUSE",
@@ -210,6 +223,7 @@ cause_groups = {
     "FINAL_RESP" : resp_keywords,
     "FINAL_CA": ca_keywords, 
     "FINAL_NEURO": neuro_keywords,
+    "FINAL_COVID": covid_keywords,
     "FINAL_COMM_DISEASE": comm_keywords,
     "FINAL_NON_COMM_DISEASE": non_comm_keywords,
     "FINAL_ACCIDENTAL_CAUSE": acc_keywords,
@@ -311,6 +325,11 @@ df["FINAL_NON_COMM_DISEASE"] = (
     df["FINAL_NEURO"]
 )
 
+df["FINAL_COMM_DISEASE"] = (
+    df["FINAL_COMM_DISEASE"] |
+    df["FINAL_COVID"] 
+)
+
 
 df["FINAL_CAUSE_ACCIDENTAL"] = (
     df["FINAL_ACCIDENTAL_CAUSE"] | 
@@ -363,11 +382,12 @@ df.loc[df["FINAL_CARDIO"], "COD"] = 6
 df.loc[df["FINAL_RESP"], "COD"] = 7
 df.loc[df["FINAL_CA"], "COD"] = 8
 df.loc[df["FINAL_NEURO"], "COD"] = 9
-df.loc[df["FINAL_COMM_DISEASE"], "COD"] = 10
-df.loc[df["FINAL_NON_COMM_DISEASE"], "COD"] = 11
-df.loc[df["FINAL_CAUSE_ACCIDENTAL"], "COD"] = 12
-df.loc[df["FINAL_EXTERNAL"], "COD"] = 13
-df.loc[df["FINAL_INTERNAL"], "COD"] = 14
+df.loc[df["FINAL_COVID"], "COD"] = 10
+df.loc[df["FINAL_COMM_DISEASE"], "COD"] = 11
+df.loc[df["FINAL_NON_COMM_DISEASE"], "COD"] = 12
+df.loc[df["FINAL_CAUSE_ACCIDENTAL"], "COD"] = 13
+df.loc[df["FINAL_EXTERNAL"], "COD"] = 14
+df.loc[df["FINAL_INTERNAL"], "COD"] = 15
 
 
 # FINAL STRING OUTPUT COLUMNS
@@ -405,6 +425,8 @@ def get_final_cause(row):
         return "CANCER"
     if row["FINAL_NEURO"]:
         return "NEUROPSYCHIATRIC ILLNESS"
+    if row["FINAL_COVID"]:
+        return "COVID-19"
     if row["FINAL_COMM_DISEASE"]:
         return "COMMUNICABLE DISEASE"
     if row["FINAL_NON_COMM_DISEASE"]:
@@ -430,66 +452,56 @@ df.to_excel("cod_algorithm/full_results_ICD.xlsx", index=False)
 
 
 ```{r lookingatoutput}
-output<-read_xlsx("fitting_mci_doc_cod/full_results_ICD.xlsx")
+output<-read_xlsx("cod_algorithm/full_results_ICD.xlsx")
 
-output%>%filter(is.na(MANNER) & is.na(CAUSE))%>%count()
+output%>%filter(is.na(CAUSE_GENERAL) & is.na(CAUSE_SPECIFIC))%>%count()
 
 
 
-output%>%filter(is.na(MANNER))%>%count() 
-output%>%filter(!is.na(MANNER))%>%count() 
-output%>%filter(is.na(CAUSE))%>%count()
-output%>%filter(!is.na(CAUSE))%>%count() 
+output%>%filter(is.na(CAUSE_GENERAL))%>%count() 
+output%>%filter(!is.na(CAUSE_GENERAL))%>%count() 
+output%>%filter(is.na(CAUSE_SPECIFIC))%>%count()
+output%>%filter(!is.na(CAUSE_SPECIFIC))%>%count() 
 
 output%>%filter(FINAL_CAUSE_TEXT!="UNDETERMINED")%>%count()
 output%>%filter(FINAL_CAUSE_TEXT=="UNDETERMINED")%>%count()
 
 output%>%group_by(FINAL_CAUSE_TEXT)%>%count()
 
+output %>% count(FINAL_CAUSE_TEXT, sort = TRUE)
 
 manner_vars <- c("ACCIDENT", "NATURAL", "HOMICIDE", "SUICIDE",
   "UNKNOWN", "PENDING") 
 
 
-sample_output_adapted_algorithm%>%
+output%>%
   filter(!if_any(all_of(manner_vars), ~ . == TRUE)) %>%
   count() 
 
-sample_output_adapted_algorithm%>%
+output%>%
   filter(if_any(all_of(manner_vars), ~ . == TRUE)) %>%
   count() 
 
-sample_output_adapted_algorithm%>%group_by(MANUAL)%>%count()
 
-sample_output_adapted_algorithm %>%
-  summarise(across(
-    all_of(manner_vars),
-    ~ sum(. == TRUE, na.rm = TRUE)
-  )) %>%
-  pivot_longer(
-    cols = everything(),
-    names_to = "variable",
-    values_to = "n_true"
-  ) %>%
-  arrange(desc(n_true))
 
-cause_vars <- c(
+ cause_vars <- c(
   "FINAL_OD", "FINAL_HEAT", "FINAL_COLD",
-  "FINAL_SUICIDE_CAUSE", "FINAL_HOMICIDE_CAUSE",
-  "FINAL_OTHER_INJURY", "FINAL_HEART", "FINAL_COMM_DISEASE",
-  "FINAL_NON_COMM_DISEASE", "FINAL_ILLNESS")
+  "FINAL_SUICIDE_CAUSE", "FINAL_HOMICIDE_CAUSE", "FINAL_CARDIO", "FINAL_RESP", "FINAL_CA",
+  "FINAL_NEURO", "FINAL_ACCIDENTAL_CAUSE", "FINAL_UNDETERMINED",
+  "FINAL_EXTERNAL", "FINAL_INTERNAL",
+  "FINAL_COMM_DISEASE", "FINAL_NON_COMM_DISEASE")
 
 
-sample_output_adapted_algorithm%>%
+output%>%
   filter(!if_any(all_of(cause_vars), ~ . == TRUE)) %>%
-  count() #77
+  count() #9946
 
-sample_output_adapted_algorithm%>%
+output%>%
   filter(if_any(all_of(cause_vars), ~ . == TRUE)) %>%
-  count() #23
+  count() #39736
 
 
-sample_output_adapted_algorithm %>%
+output %>%
   summarise(across(
     all_of(cause_vars),
     ~ sum(. == TRUE, na.rm = TRUE)
