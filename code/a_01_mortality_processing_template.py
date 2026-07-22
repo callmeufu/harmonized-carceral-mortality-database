@@ -16,12 +16,17 @@ The script was designed to process state prison mortality data from
         https://texasjusticeinitiative.org and,
     d) the UCLA Law COVID-19 Behind Bars project
 
-INPUTS: Modify the config and standardization dictionaries below for your dataset.
-OUTPUTS: 1) A standardized, HIFLD-linked geocoded dataset with consistent column names and formats (output_path_linked). We also include
+INPUTS: 
+    1) Mortality data (no controls or lag days) that needs to be geocoded
+    2) Modify config (a_00_configs.py) and standardization dictionaries below for your dataset.
+
+OUTPUTS: 
+    1) A standardized, HIFLD-linked geocoded dataset with consistent column names and formats (output_path_linked). We also include
             records that do not have a clear HIFLD match but have spatial info such as an address or city (enabling extrapolation for exposure analyses).
             Users can choose to exclude those imprecise records from spatial analyses if desired, but we provide them in the output with
             a flag for transparency and potential future geocoding efforts.
-         2) A dataset of records that could *not* be matched to HIFLD (output_path_unlinked) and have no other spatial information
+    2) A dataset of records that could *not* be matched to HIFLD (output_path_unlinked) and have no other spatial information
+    3) Outputs from this script are routed to ./data/a_01_mortality_data
 ==============================================================================================
 """
 
@@ -29,10 +34,15 @@ import os
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 import pandas as pd
 import numpy as np
 from difflib import get_close_matches
-import 01_all_facility_dictionaries
+import all_facility_dictionaries
+
+# Anchor data paths to the repo root so the script works regardless of cwd.
+# Script lives at <repo>/analysis/01_preparation/<file>.py, so parents[2] is the repo root.
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 try:
     from geopy.geocoders import ArcGIS, Nominatim
@@ -48,59 +58,17 @@ pd.set_option('future.no_silent_downcasting', True)
 
 ###--------------------------- USER CONFIGURATION ---------------------------###
 ### REQUIRED:
-### 1. Modify the config section to match your input data file paths and columns
-###     1a. A death date, a facility identifier (e.g. name or address), and a state column is required for this script
-###     1b. You may also need to modify the mapping dictionaries below for attributes like state names, sex, race, or cause of death
-### 2. If you have state-specific facility name/address dictionaries or state-specific cause of death dictionaries,
-###     add them to all_facility_dictionaries.py and they will be automatically loaded by this script
+### 1. Dataset-specific configs live in a_00_configs.py. The script loops over
+###    every entry in CONFIGS and processes each in turn. To add a new dataset,
+###    define another config dict in a_00_configs.py and add it to CONFIGS.
+### 2. You may also need to modify the mapping dictionaries below for attributes
+###    like state names, sex, race, or cause of death.
+### 3. If you have state-specific facility name/address dictionaries or
+###    state-specific cause of death dictionaries, add them to
+###    all_facility_dictionaries.py and they will be automatically loaded.
 ###
 
-config = {
-    # (REQUIRED) FILE PATHS
-    "mortality_path": './data/a_00_mortality_data_raw/combined_mortality_data_04012026.csv', # path to your mortality dataset that needs to be processed
-    "hifld_path": "./data/z_other_datasets/prison_boundaries.csv",
-    "output_path_linked": "./data/a_01_mortality_data_processed/state_docs_excl_2016_to_2019_04082026.csv",
-    "output_path_unlinked": "./data/a_01_mortality_data_processed/no_geocode_mortality_data/unlinked_state_docs_excl_2016_to_2019_04082026.csv",
-
-    # REQUIRED COLUMNS: death date and facility identifier from your mortality/health data
-    "death_date_col": "DEATH_DATE",          # Column containing death date, e.g. '03/15/2020' (any format, date will be auto-parsed),
-        # can provide date component columns if date is split across multiple columns (see death_year_col, death_month_col, death_day_col below)
-    "facility_cols": ["FACILITY_NAME", "FACILITY_ABBREV"],    # List of facility identifier columns, e.g. facility_name or facility_abbrev; will try in order (first non-null value used)
-    "address_col": "FACILITY_ADDRESS",             # Facility address (for fuzzy matching fallback)
-
-    # REQUIRED: state/state abbreviation column - state code dictionaries provided in the next section, please review for your case
-    "state_col": "STATE_ABBREV",            # Column with state (full name, mci code, or abbrev—will be auto-converted)
-
-    # OPTIONAL date-component columns (if date is split across columns, only necessary if death_date_col is missing or unparseable)
-    "death_year_col": "DEATH_YEAR",        # optional, e.g. '2020' used if death_date_col is missing or unparseable
-    "death_month_col": "DEATH_MONTH",   # optional, e.g. '03' or 'March'
-    "death_day_col": "DEATH_DAY",     # optional, e.g. '15'
-
-    # OPTIONAL: date of birth information. Need *either* dob_col or dob_year/month/day
-    "dob_col": "DATE_OF_BIRTH",                # Optional date of birth column, e.g. '12/01/1980' (date format will be auto-parsed)
-    "dob_year_col": "BIRTH_YEAR",      # optional split DOB, e.g. '1980'
-    "dob_month_col": None,      # optional split DOB, e.g. '12' or 'December'
-    "dob_day_col": None,        # optional split DOB, e.g. '01'
-
-    # OPTIONAL COLUMNS: if present, will be standardized
-    "sex_col": ["SEX", "GENDER"], # Sex/gender column(s); can be a string or prioritized list (first non-empty value per row is used)
-        # ^ Note: this was done because some states report 'sex' using the word 'gender'
-    "race_col": "RACE",              # Race column - please review race_mapping dictionary to ensure your values will be standardized correctly
-    "age_col": "AGE",                 # Age (if exists, will be coerced numeric, else will be calculated from DOB info if provided)
-    "cause_col": "CAUSE_GENERAL",               # Cause of death as text/string
-    "cause_key_col": "CAUSE_GENERAL_KEY",            # Cause key/code column, e.g. '1' corresponding to Illness; may be decoded using either cause_dict_name or {STATE}_cause_dict
-    "cause_dict_name": None,            # Dataset-wide cause dictionary name. If omitted, falls back to {STATE}_cause_dict (located in all_facility_dictionaries.py if present).
-    "city_col": "CITY",                    # City of facility (for address fallback)
-
-    # OPTIONAL: CMP_ID join (if CMP_ID column exists, link via CMP_fac_data_UO.csv)
-    #   CMP_ID is a unique identifier for prison facilities used in the UCLA Law custodial mortality project, https://github.com/uclalawcovid19behindbars/custodial_mortality_project/tree/main/Crosswalks
-    "cmp_id_col": "CMP_ID",             # Optional column with CMP facility ID
-    "cmp_data_path": "data/cmp_fac_data.csv",          # Path to CMP-to-HIFLD mapping file
-
-    # OPTIONAL: additional metadata columns to preserve as a list of strings
-    #"preserve_cols": ["Illspec", "Drugspec", "Selfspec", "Accspec", "Suicspec", "Homispec", "Otherspec", "Place"]
-    "preserve_cols": ["CAUSE_SPECIFIC", "DAYS_INCARCERATED", "DATE_INCARCERATED", "MEDICAL_CAUSE", "Location", "INCIDENT_LOCATION"],  # List any important columns
-}
+from a_00_configs import CONFIGS
 
 def get_old_col(col):
     """Get the renamed column name with 'old_' prefix."""
@@ -587,7 +555,7 @@ def geocode_records(df, config, city_col_old):
         return df
 
     # Configurable geocoding settings (with safe defaults).
-    cache_path = config.get('geocode_cache_path', 'analysis_datasets/d/geocode_cache.csv')
+    cache_path = config.get('geocode_cache_path', str(REPO_ROOT / "data" / "geocode_cache.csv"))
     geocoder_timeout = int(config.get('geocode_timeout', 10))
     max_retries = int(config.get('geocode_max_retries', 3))
     base_delay = float(config.get('geocode_base_delay', 1.0))
@@ -741,6 +709,7 @@ def geocode_records(df, config, city_col_old):
     if updates:
         cache_df = pd.concat([cache_df, pd.DataFrame(updates)], ignore_index=True)
         cache_df = cache_df.drop_duplicates(subset=['address_column'], keep='last')
+        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
         cache_df.to_csv(cache_path, index=False)
 
     result_map = dict(zip(cache_df['address_column'], zip(cache_df['latitude'], cache_df['longitude'])))
@@ -1729,7 +1698,16 @@ def standardize_demographics(df, config):
 ###-------- EXECUTION --------###
 
 if __name__ == "__main__":
-    df = process_mortality_data(config, sex_mapping, race_mapping)
-    print("\n" + "=" * 70)
-    print("Processing complete. Results available in df variable.")
-    print("=" * 70)
+    results = {}
+    for name, config in CONFIGS.items():
+        print("\n" + "#" * 70)
+        print(f"# Processing config: {name}")
+        print("#" * 70 + "\n")
+        results[name] = process_mortality_data(config, sex_mapping, race_mapping)
+        print("\n" + "=" * 70)
+        print(f"Done: {name}")
+        print("=" * 70)
+
+    print("\n" + "#" * 70)
+    print(f"# All configs processed: {', '.join(results)}")
+    print("#" * 70)
