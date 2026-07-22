@@ -17,8 +17,8 @@ py_require("numpy")
 py_require("openpyxl")
 py_require("rapidfuzz")
 
-template<-read_xlsx("cod_algorithm/COD Coding Input template.xlsx")
-combined<-readRDS("~/Documents/GitHub/harmonized_carceral_mortality_data/data/hcmd.rds")
+template<-read_xlsx("a_02_COD Coding Input template.xlsx")
+combined <- readRDS("~/Documents/GitHub/harmonized_carceral_mortality_data/data/a_02_mortality_data_post_processed/combined_mortality_data.rds")
 
 ```
 
@@ -83,9 +83,9 @@ combined %>%
 
 fitting combined into template 1 where manner = COD general and cause= COD specific 
 ```{r fitting}
-template1 <- combined %>%
+ template1 <- combined %>%
   transmute(
-    CASE_NUMBER = nr,
+    CASE_NUMBER = row_number(),
     CAUSE_GENERAL = cause_general,
 
    CAUSE_SPECIFIC = coalesce(
@@ -113,7 +113,7 @@ template1$CAUSE_GENERAL[template1$CAUSE_GENERAL == "Suicide (e.g. hanging, knife
 template1$CAUSE_GENERAL[template1$CAUSE_GENERAL == "Illness (exclude AIDS-related deaths), specify illness"] <- "Illness"
 
 
-write_xlsx(template1, "COD Coding Input template_1.xlsx")
+write_xlsx(template1, "z_archived/COD Coding Input template_1.xlsx")
 ```
 
 ```{python adaptedalgorithm str85 newcategories}
@@ -124,10 +124,10 @@ import re
 
 # CONFIG
 
-excel_file_name = "COD Coding Input template_1.xlsx"
+excel_file_name = "z_archived/COD Coding Input template_1.xlsx"
 sub_sheet = "Sheet1"
 
-keywords_excel = "final_kw_v1.xlsx"
+keywords_excel = "a_03_final_kw_v1.xlsx"
 kw_sub_sheet = "kw_icd_categories"
 
 FUZZY_THRESHOLD = 85
@@ -454,15 +454,103 @@ def get_final_cause(row):
 df["FINAL_MANNER_TEXT"] = df.apply(get_final_manner, axis=1)
 df["FINAL_CAUSE_TEXT"] = df.apply(get_final_cause, axis=1)
 
+#LEVELS
 
-df.to_excel("full_results_ICD.xlsx", index=False)
+#level1
+def get_level1(row):
+    if row["FINAL_EXTERNAL"]:
+        return "External/Injury (Unnatural Death)"
+    if row["FINAL_INTERNAL"]:
+        return "Internal (Natural Death)"
+    if row["FINAL_UNDETERMINED"]:
+        return "Undetermined"
+    return ""
+
+#level2
+def get_level2(row):
+
+    if row["FINAL_CAUSE_ACCIDENTAL"]:
+        return "Accidental"
+
+    if row["FINAL_CAUSE_INTENTIONAL"]:
+        return "Intentional"
+
+    if row["FINAL_COMM_DISEASE"]:
+        return "Communicable Disease"
+
+    if row["FINAL_NON_COMM_DISEASE"]:
+        return "Non-Communicable Disease"
+
+    if row["FINAL_UNDETERMINED"]:
+        return "Undetermined"
+
+    return ""
+
+#level3
+def get_level3(row):
+
+    # External -> Accidental
+    if row["FINAL_COLD"]:
+        return "Cold-related death"
+
+    if row["FINAL_HEAT"]:
+        return "Heat-related death"
+
+    if row["FINAL_OD"]:
+        return "Overdose"
+
+    if row["FINAL_ACCIDENTAL_CAUSE"]:
+        return "Other Accidental"
+
+    # External -> Intentional
+    if row["FINAL_SUICIDE_CAUSE"]:
+        return "Suicide"
+
+    if row["FINAL_HOMICIDE_CAUSE"]:
+        return "Homicide"
+
+    # Internal -> Communicable
+    if row["FINAL_COVID"]:
+        return "COVID-19"
+
+    if row["FINAL_COMM_DISEASE"]:
+        return "Other Communicable Disease"
+
+    # Internal -> Non-Communicable
+    if row["FINAL_CA"]:
+        return "Cancer"
+
+    if row["FINAL_CARDIO"]:
+        return "Cardiovascular Disease"
+
+    if row["FINAL_RESP"]:
+        return "Respiratory Disease"
+
+    if row["FINAL_NEURO"]:
+        return "Neuropsychiatric Conditions"
+
+    if row["FINAL_NON_COMM_DISEASE"]:
+        return "Other Non-Communicable Disease"
+
+    # Undetermined
+    if row["FINAL_UNDETERMINED"]:
+        return "Undetermined"
+
+    return ""
+
+df["LEVEL_1"] = df.apply(get_level1, axis=1)
+df["LEVEL_2"] = df.apply(get_level2, axis=1)
+df["LEVEL_3"] = df.apply(get_level3, axis=1)
+
+
+df.to_excel("b_02_full_results_ICD.xlsx", index=False)
 
 
 ```
 
 
 ```{r lookingatoutput}
-output<-read_xlsx("cod_algorithm/full_results_ICD.xlsx")
+output<-read_xlsx("b_02_full_results_ICD.xlsx")
 
 output%>%filter(is.na(CAUSE_GENERAL) & is.na(CAUSE_SPECIFIC))%>%count()
 
