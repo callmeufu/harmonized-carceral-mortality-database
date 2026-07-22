@@ -85,32 +85,48 @@ fitting combined into template 1 where manner = COD general and cause= COD speci
 ```{r fitting}
  template1 <- combined %>%
   transmute(
-    CASE_NUMBER = row_number(),
-    CAUSE_GENERAL = cause_general,
-
-   CAUSE_SPECIFIC = coalesce(
-      illspec,
-      drugspec,
-      homispec,
-      suicspec,
-      selfspec,
-      accspec,
-      otherspec, 
-      cause_specific
+    CASE_NUMBER = case_number,
+    CAUSE = paste(
+      cause_general,
+      coalesce(
+        illspec,
+        drugspec,
+        homispec,
+        suicspec,
+        selfspec,
+        accspec,
+        otherspec,
+        cause_specific
+      ),
+      sep = ": "
     )
   )
 
 #checking to make sure missingness pattern matches combined dataset 
-template1%>%filter(is.na(CAUSE_GENERAL))%>%count() #7688
-template1%>%filter(is.na(CAUSE_SPECIFIC))%>%count() #14214
+template1%>%filter(is.na(CAUSE))%>%count() #0
+template1%>%count(CAUSE, sort= TRUE)
+template1$CAUSE[template1$CAUSE == "NA: NA"]<-NA 
+template1%>%filter(is.na(CAUSE))%>%count() #4249
+
 
 #cleaning template to shorten cause_general SUICIDE description 
-template1 %>%count(CAUSE_GENERAL, sort = TRUE)
+template1 %>%count(CAUSE, sort = TRUE)
 
-template1$CAUSE_GENERAL[template1$CAUSE_GENERAL == "Suicide (e.g. hanging, knife/cutting instrument, intentional drug overdose) – describe events"] <- "Suicide"
+template1$CAUSE <- sub(
+  "^Suicide.*?:",
+  "Suicide:",
+  template1$CAUSE,
+  ignore.case = TRUE
+)
 
 #doing same for aids related illness
-template1$CAUSE_GENERAL[template1$CAUSE_GENERAL == "Illness (exclude AIDS-related deaths), specify illness"] <- "Illness"
+template1$CAUSE <- sub(
+  "^Illness.*?:",
+  "Illness:",
+  template1$CAUSE,
+  ignore.case = TRUE
+)
+
 
 
 write_xlsx(template1, "z_archived/COD Coding Input template_1.xlsx")
@@ -137,8 +153,8 @@ FUZZY_THRESHOLD = 85
 
 df = pd.read_excel(excel_file_name, sheet_name=sub_sheet, engine="openpyxl")
 
-df["MANNER"] = df["CAUSE_GENERAL"].fillna("").astype(str).str.strip().str.upper()
-df["CAUSE"] = df["CAUSE_SPECIFIC"].fillna("").astype(str).str.strip().str.upper()
+
+df["CAUSE"] = df["CAUSE"].fillna("").astype(str).str.strip().str.upper()
 
 
 # LOAD KEYWORDS
@@ -166,19 +182,10 @@ internal_keywords = clean("INTERNAL KEYWORDS")
 unk_keywords = clean("UNDETERMINED")
 
 
-# CAUSE/MANNER FALLBACK LOGIC
 
 df["CAUSE_FOR_CLASS"] = df["CAUSE"]
 
 missing_cause = df["CAUSE_FOR_CLASS"].eq("")
-
-df.loc[missing_cause, "CAUSE_FOR_CLASS"] = df.loc[missing_cause, "MANNER"]
-
-df["MANNER_FOR_CLASS"] = df["MANNER"]
-
-missing_manner = df["MANNER_FOR_CLASS"].eq("")
-
-df.loc[missing_manner, "MANNER_FOR_CLASS"] = df.loc[missing_manner, "CAUSE"]
 
 
 # INITIAL FLAGS
@@ -293,35 +300,6 @@ for flag, kws in cause_groups.items():
             df.loc[idx, "MATCH_SCORE"] = best_score
             df.loc[idx, "MATCH_TYPE"] = "Fuzzy"
 
-# MANNER FLAGS
-
-df["MANNER_HOMICIDE"] = df["MANNER_FOR_CLASS"].apply(
-    lambda x: fuzz.token_set_ratio(x, "HOMICIDE") >= FUZZY_THRESHOLD
-)
-
-df["MANNER_SUICIDE"] = df["MANNER_FOR_CLASS"].apply(
-    lambda x: fuzz.token_set_ratio(x, "SUICIDE") >= FUZZY_THRESHOLD
-)
-
-df["MANNER_ACCIDENTAL"] = df["MANNER_FOR_CLASS"].apply(
-    lambda x: fuzz.token_set_ratio(x, "ACCIDENTAL") >= FUZZY_THRESHOLD
-)
-
-df["MANNER_NATURAL"] = df["MANNER_FOR_CLASS"].apply(
-    lambda x: (
-        fuzz.token_set_ratio(x, "NATURAL") >= FUZZY_THRESHOLD
-        or 
-        fuzz.token_set_ratio(x, "ILLNESS") >= FUZZY_THRESHOLD
-    )
-)
-
-df["MANNER_UNKNOWN"] = df["MANNER_FOR_CLASS"].apply(
-    lambda x: (
-        fuzz.token_set_ratio(x, "UNKNOWN") >= FUZZY_THRESHOLD
-        or
-        fuzz.token_set_ratio(x, "UNDETERMINED") >= FUZZY_THRESHOLD
-    )
-)
 
 # CAUSE STRUCTURE
 
@@ -377,44 +355,6 @@ df["MANUAL"] = ~(
     df["FINAL_UNDETERMINED"]
 )
 
-# COD ASSIGNMENT
-
-df["COD"] = 0
-
-df.loc[df["FINAL_UNDETERMINED"], "COD"] = 99
-df.loc[df["MANUAL"], "COD"] = 0
-df.loc[df["FINAL_OD"], "COD"] = 1
-df.loc[df["FINAL_COLD"], "COD"] = 2
-df.loc[df["FINAL_HEAT"], "COD"] = 3
-df.loc[df["FINAL_SUICIDE_CAUSE"], "COD"] = 4
-df.loc[df["FINAL_HOMICIDE_CAUSE"], "COD"] = 5
-df.loc[df["FINAL_CARDIO"], "COD"] = 6
-df.loc[df["FINAL_RESP"], "COD"] = 7
-df.loc[df["FINAL_CA"], "COD"] = 8
-df.loc[df["FINAL_NEURO"], "COD"] = 9
-df.loc[df["FINAL_COVID"], "COD"] = 10
-df.loc[df["FINAL_COMM_DISEASE"], "COD"] = 11
-df.loc[df["FINAL_NON_COMM_DISEASE"], "COD"] = 12
-df.loc[df["FINAL_CAUSE_ACCIDENTAL"], "COD"] = 13
-df.loc[df["FINAL_EXTERNAL"], "COD"] = 14
-df.loc[df["FINAL_INTERNAL"], "COD"] = 15
-
-
-# FINAL STRING OUTPUT COLUMNS
-
-def get_final_manner(row):
-    if row["MANNER_SUICIDE"]:
-        return "SUICIDE"
-    if row["MANNER_HOMICIDE"]:
-        return "HOMICIDE"
-    if row["MANNER_ACCIDENTAL"]:
-        return "ACCIDENTAL"
-    if row["MANNER_NATURAL"]:
-        return "NATURAL"
-    if row["MANNER_UNKNOWN"]:
-        return "UNKNOWN"
-    return "UNKNOWN"
-
 
 def get_final_cause(row):
     if row["FINAL_OD"]:
@@ -451,8 +391,8 @@ def get_final_cause(row):
         return "UNDETERMINED"
     return "UNDETERMINED"
 
-df["FINAL_MANNER_TEXT"] = df.apply(get_final_manner, axis=1)
-df["FINAL_CAUSE_TEXT"] = df.apply(get_final_cause, axis=1)
+
+df["FINAL_CAUSE"] = df.apply(get_final_cause, axis=1)
 
 #LEVELS
 
@@ -538,9 +478,9 @@ def get_level3(row):
 
     return ""
 
-df["LEVEL_1"] = df.apply(get_level1, axis=1)
-df["LEVEL_2"] = df.apply(get_level2, axis=1)
-df["LEVEL_3"] = df.apply(get_level3, axis=1)
+df["CLASS_LEVEL_1"] = df.apply(get_level1, axis=1)
+df["CLASS_LEVEL_2"] = df.apply(get_level2, axis=1)
+df["CLASS_LEVEL_3"] = df.apply(get_level3, axis=1)
 
 
 df.to_excel("b_02_full_results_ICD.xlsx", index=False)
@@ -549,25 +489,30 @@ df.to_excel("b_02_full_results_ICD.xlsx", index=False)
 ```
 
 
+
 ```{r lookingatoutput}
 output<-read_xlsx("b_02_full_results_ICD.xlsx")
 
-output%>%filter(is.na(CAUSE_GENERAL) & is.na(CAUSE_SPECIFIC))%>%count()
+output%>%filter(is.na(CAUSE))%>%count()
+
+output%>%filter(FINAL_CAUSE!="UNDETERMINED"|NA)%>%count()
+
+output%>%group_by(FINAL_CAUSE)%>%count()
+
+output %>% count(FINAL_CAUSE, sort = TRUE)
+
+output%>%count(CLASS_LEVEL_1, sort = TRUE)
+output%>%count(CLASS_LEVEL_2, sort = TRUE)
+output%>%count(CLASS_LEVEL_3, sort = TRUE)
+
+output_little<-output%>%select(CAUSE, MATCHED_KEYWORD, FINAL_CAUSE, CLASS_LEVEL_1, CLASS_LEVEL_2, CLASS_LEVEL_3)
+
+outputlittlenas<-output_little%>%filter(is.na(CLASS_LEVEL_2))%>%filter(is.na(CLASS_LEVEL_3))%>%filter(!is.na(CLASS_LEVEL_1))
+```
 
 
-
-output%>%filter(is.na(CAUSE_GENERAL))%>%count() 
-output%>%filter(!is.na(CAUSE_GENERAL))%>%count() 
-output%>%filter(is.na(CAUSE_SPECIFIC))%>%count()
-output%>%filter(!is.na(CAUSE_SPECIFIC))%>%count() 
-
-output%>%filter(FINAL_CAUSE_TEXT!="UNDETERMINED")%>%count()
-output%>%filter(FINAL_CAUSE_TEXT=="UNDETERMINED")%>%count()
-
-output%>%group_by(FINAL_CAUSE_TEXT)%>%count()
-
-output %>% count(FINAL_CAUSE_TEXT, sort = TRUE)
-
+#extra testing
+```{r extra}
 manner_vars <- c("ACCIDENT", "NATURAL", "HOMICIDE", "SUICIDE",
   "UNKNOWN", "PENDING") 
 
@@ -592,11 +537,11 @@ output%>%
 
 output%>%
   filter(!if_any(all_of(cause_vars), ~ . == TRUE)) %>%
-  count() #9946
+  count() #13466
 
 output%>%
   filter(if_any(all_of(cause_vars), ~ . == TRUE)) %>%
-  count() #39736
+  count() #36216
 
 
 output %>%
@@ -656,4 +601,3 @@ tbl<-sample_output_adapted_algorithm%>%
   filter(if_any(all_of(cause_vars), ~ . == TRUE)) %>% filter(if_any(all_of(manner_vars), ~ . == TRUE))
 
 ```
-

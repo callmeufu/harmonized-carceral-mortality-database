@@ -572,6 +572,10 @@ output %>% count(FINAL_CAUSE, sort = TRUE)
 output%>%count(CLASS_LEVEL_1, sort = TRUE)
 output%>%count(CLASS_LEVEL_2, sort = TRUE)
 output%>%count(CLASS_LEVEL_3, sort = TRUE)
+
+output_little<-output%>%select(CAUSE_GENERAL, CAUSE_SPECIFIC, MATCHED_KEYWORD, FINAL_CAUSE, CLASS_LEVEL_1, CLASS_LEVEL_2, CLASS_LEVEL_3)
+
+outputlittlenas<-output_little%>%filter(is.na(CLASS_LEVEL_2))%>%filter(is.na(CLASS_LEVEL_3))%>%filter(!is.na(CLASS_LEVEL_1))
 ```
 
 
