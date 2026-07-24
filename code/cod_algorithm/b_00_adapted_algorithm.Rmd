@@ -510,6 +510,26 @@ output_little<-output%>%select(CAUSE, MATCHED_KEYWORD, FINAL_CAUSE, CLASS_LEVEL_
 outputlittlenas<-output_little%>%filter(is.na(CLASS_LEVEL_2))%>%filter(is.na(CLASS_LEVEL_3))%>%filter(!is.na(CLASS_LEVEL_1))
 ```
 
+#combining cod output with combined_mortality_data
+```{r combining}
+output$case_number<-output$CASE_NUMBER
+output$final_cause<-output$FINAL_CAUSE
+output$class_level_1<-output$CLASS_LEVEL_1
+output$class_level_2<-output$CLASS_LEVEL_2
+output$class_level_3<-output$CLASS_LEVEL_3
+output$matched_keyword<-output$MATCHED_KEYWORD
+
+hcmd <- combined %>%
+  left_join(
+    output %>%
+      select(case_number, final_cause, matched_keyword, class_level_1, class_level_2, class_level_3),
+    by = "case_number"
+  )
+
+saveRDS(hcmd, "../../data/hcmd.rds")
+
+```
+
 
 #extra testing
 ```{r extra}
