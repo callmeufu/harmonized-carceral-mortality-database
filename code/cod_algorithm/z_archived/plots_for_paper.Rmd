@@ -80,7 +80,18 @@ combined<-combined%>%mutate(year=year(death_date_dt))
 
 deaths_by_year<-combined%>%group_by(year)%>%count()
 
+#checking out years of coverage by state
+coverage <- combined %>%
+  group_by(state_abbrev) %>%
+  summarize(
+    n_years = n_distinct(year),
+    first_year = min(year),
+    last_year = max(year),
+    .groups = "drop"
+  )
 
+
+#plotting from earliest to latest beginning of coverage
 ggplot(combined, aes(x =year, y = fct_reorder(state_abbrev, year, .fun = min, .desc = TRUE))) +
   geom_tile(fill = "black", width = 1, height = 0.75) + 
   scale_y_discrete(limits = rev) + 
@@ -98,6 +109,30 @@ ggplot(combined, aes(x =year, y = fct_reorder(state_abbrev, year, .fun = min, .d
     y = "State"
   )
 
+#plotting by least to most coverage
+combined2 <- combined %>%
+  left_join(coverage, by = "state_abbrev")
+
+ggplot(
+  combined2,
+  aes(
+    x = year,
+    y = fct_reorder(state_abbrev, n_years, .desc = TRUE)
+  )
+) +
+  geom_tile(fill = "black", width = 1, height = 0.75) +
+  scale_x_continuous(breaks = seq(1996, 2024, by = 4)) +
+  theme_minimal() +
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_line(color = "lightgray"),
+    plot.title = element_text(face = "bold", hjust = 0)
+  ) +
+  labs(
+    x = "Year",
+    y = "State"
+  )
 ```
 
 ##summarizing across time (2013-2019 according to the plot)
@@ -158,11 +193,12 @@ summary(combined$age)
 
 #stacked bar chart 
 ```{r barchart}
-output <- read_excel("cod_algorithm/full_results_ICD.xlsx")
-output%>%group_by(FINAL_CAUSE_TEXT)%>%count()
+library(readxl)
+output <- read_excel("code/cod_algorithm/b_02_full_results_ICD.xlsx")
+output%>%group_by(FINAL_CAUSE)%>%count()
 
-output_level3 <- output %>%
-  filter(FINAL_CAUSE_TEXT %in% c(
+output_level4 <- output %>%
+  filter(FINAL_CAUSE %in% c(
     "CANCER",
     "CARDIOVASCULAR DISEASE",
     "COVID-19",
@@ -171,18 +207,19 @@ output_level3 <- output %>%
     "NEUROPSYCHIATRIC ILLNESS",
     "OVERDOSE",
     "RESPIRATORY DISEASE",
-    "SUICIDE"
+    "SUICIDE",
+    "UNDETERMINED"
   ))
 
-top3 <- output_level3 %>% 
-  count(FINAL_CAUSE_TEXT, sort = TRUE) %>%
-  slice_head(n = 3) %>%
-  pull(FINAL_CAUSE_TEXT)
+top4 <- output_level4 %>% 
+  count(FINAL_CAUSE, sort = TRUE) %>%
+  slice_head(n = 4) %>%
+  pull(FINAL_CAUSE)
 
-barchart <- output_level3 %>%
+barchart <- output_level4 %>%
   mutate(
-    cause = if_else(FINAL_CAUSE_TEXT %in% top3,
-                    FINAL_CAUSE_TEXT,
+    cause = if_else(FINAL_CAUSE %in% top4,
+                    FINAL_CAUSE,
                     "ALL OTHER")
   ) %>%
   count(cause) %>%
@@ -198,7 +235,7 @@ ggplot(barchart,
   ) +
   theme_classic(base_size = 12)
 
-output %>%count(FINAL_CAUSE_TEXT, sort = TRUE)
+output %>%count(FINAL_CAUSE, sort = TRUE)
 ```
 
 #age and sex

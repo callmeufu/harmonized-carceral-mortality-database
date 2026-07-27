@@ -81,7 +81,7 @@ combined %>%
 ```
 
 
-fitting combined into template 1 where manner = COD general and cause= COD specific 
+fitting combined into template 1 where cause = COD general and specific (concatenated) 
 ```{r fitting}
  template1 <- combined %>%
   transmute(
