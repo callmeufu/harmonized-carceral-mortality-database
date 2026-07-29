@@ -17,8 +17,8 @@ py_require("numpy")
 py_require("openpyxl")
 py_require("rapidfuzz")
 
-template<-read_xlsx("a_02_COD Coding Input template.xlsx")
-combined <- readRDS("~/Documents/GitHub/harmonized_carceral_mortality_data/data/a_02_mortality_data_post_processed/combined_mortality_data.rds")
+template<-read_xlsx("code/cod_algorithm/a_02_COD Coding Input template.xlsx")
+combined <- readRDS("data/hcmd.rds")
 
 ```
 

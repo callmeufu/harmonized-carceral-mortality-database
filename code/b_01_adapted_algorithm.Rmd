@@ -18,7 +18,7 @@ py_require("openpyxl")
 py_require("rapidfuzz")
 
 template<-read_xlsx("code/cod_algorithm/a_02_COD Coding Input template.xlsx")
-combined<-read_rds("data/hcmd.rds")
+combined<-read_rds("data/a_02_mortality_data_post_processed/combined_mortality_data.rds")
 
 ```
 
@@ -538,6 +538,10 @@ output$class_level_1<-output$CLASS_LEVEL_1
 output$class_level_2<-output$CLASS_LEVEL_2
 output$class_level_3<-output$CLASS_LEVEL_3
 output$matched_keyword<-output$MATCHED_KEYWORD
+
+combined<-combined%>%select(-matched_keyword.x, -matched_keyword.y, -class_level_1.x, -class_level_2.x, -class_level_3.x, -class_level_1.y, -class_level_2.y, -class_level_3.y, -class_level_1, -class_level_2, -class_level_3)
+
+combined<-combined%>%select(-matched_keyword, -final_cause)
 
 hcmd <- combined %>%
   left_join(
