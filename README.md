@@ -1,10 +1,10 @@
 # Harmonized Carceral Mortality Database (HCMD)
 
-The Harmonized Carceral Mortality Database (HCMD) is a unified, georeferenced dataset of deaths occurring in U.S. state-operated correctional facilities. It is compiled and harmonized from multiple administrative, nonprofit, and public-records sources. The HCMD standardizes decedent characteristics, facility identifiers, dates of death, and causes of death to enable more consistent epidemiologic analyses of custodial mortality in the United States, independent of federal reporting programs.
+The Harmonized Carceral Mortality Database (HCMD) is a unified, georeferenced dataset of deaths occurring in U.S. state-operated correctional facilities. It is compiled and harmonized from multiple administrative, nonprofit, and public-records sources. The HCMD standardizes decedent characteristics, facility identifiers, dates of death, and causes of death to enable more consistent epidemiological analyses of custodial mortality in the United States, independent of federal reporting programs.
 
 The dataset currently includes: 
 
-- **49,682** mortality records; 77.7% (n = 39,736) have algorithmically estimated cause of death
+- **49,682** mortality records; 85.7% (n = 42,584) have algorithmically estimated cause of death
 - All 50 states have at least some records available
 - Temporal coverage **March 1996 – December 2024** varies by state
 - **1,089** unique carceral facilities represented
@@ -17,7 +17,7 @@ Documenting and measuring mortality in correctional facilities is essential for 
 
 Federal reporting has not kept pace. The Death in Custody Reporting Act (DCRA) of 2000 established the Bureau of Justice Statistics' Mortality in Correctional Institutions (MCI) program, but the DCRA expired in 2006. A reauthorized DCRA (2014) shifted collection responsibility to the Bureau of Justice Assistance (BJA), whose data collection has had significant, well-documented quality and coverage gaps, and none of which has been made publicly available. BJS's own MCI data collection ended after 2019.
 
-In response, researchers and nonprofits — including the [UCLA Law Behind Bars Data Project](https://github.com/uclalawbehindbars), the [Third City Project]([https://github.com/uclalawbehindbars](https://3rdcityproject.com/index.php/mortality_data/)), the [Texas Justice Initiative](https://texasjusticeinitiative.org/datasets/custodial-deaths), [Incarceration Transparency](https://www.incarcerationtransparency.org/), and others — have built independent datasets to fill this gap. The HCMD extends this effort by harmonizing records across these sources, the (deprecated) federal MCI program, and state Departments of Corrections into a single, georeferenced database. We further apply Natural Language Processing (NLP) to free-text cause of death differentially reported by the sources to automate cause of death for 77.7% of records (n = 39,736).
+In response, researchers and nonprofits — including the [UCLA Law Behind Bars Data Project](https://github.com/uclalawbehindbars), the [Third City Project]([https://github.com/uclalawbehindbars](https://3rdcityproject.com/index.php/mortality_data/)), the [Texas Justice Initiative](https://texasjusticeinitiative.org/datasets/custodial-deaths), [Incarceration Transparency](https://www.incarcerationtransparency.org/), and others — have built independent datasets to fill this gap. The HCMD extends this effort by harmonizing records across these sources, the (deprecated) federal MCI program, and state Departments of Corrections into a single, georeferenced database. We further apply Natural Language Processing (NLP) to free-text cause of death differentially reported by the sources to automate cause of death for857.7% of records (n = 42,584).
 
 ## Methods
 
@@ -28,7 +28,7 @@ Full methodological detail is available in the accompanying data descriptor pape
 A full list of source datasets and their coverage is documented in Table 1 of our accompanying paper. Records were compiled from three main categories of sources:
 
 1. **BJS MCI dataset** — the most authoritative source, released for all 50 states from October 2015 to December 2019 via a Freedom of Information Act (FOIA) request.
-2. **XX State Department of Corrections (DOC) websites** — reviewed individually for publicly posted mortality records.
+2. **State Department of Corrections (DOC) websites** — reviewed individually for publicly posted mortality records.
 3. **Nonprofit and prior research datasets** — compiled from nonprofit organizations and known academic projects that rely on public records requests.
 
 ### Compilation & Deduplication
@@ -75,7 +75,7 @@ Key columns in the harmonized dataset include:
 
 | Column | Description |
 |---|---|
-| `nr` | unique identifier for each decedent |
+| `case_number` | unique identifier per decedent |
 | `death_date_dt` | Date of death |
 | `state_abbrev` | State postal abbreviation |
 | `latitude`, `longitude` | Geocoded location of death |
@@ -88,13 +88,12 @@ Key columns in the harmonized dataset include:
 | `sex`, `race` | Standardized decedent demographics |
 | `date_of_birth`, `age`, `age_from_dates` | Decedent age (reported and/or computed) |
 | `final_cause` | Algorithm-classified cause-of-death information based on `cause_general` and `cause_specific` columns|
-| `level1` | General and specific cause-of-death information |
-| `level2` | General and specific cause-of-death information |
-| `level3` | General and specific cause-of-death information |
+| `class_level_1` | General and specific cause-of-death information |
+| `class_level_2` | General and specific cause-of-death information |
+| `class_level_3` | General and specific cause-of-death information |
 | `keyword_matched` | General and specific cause-of-death information |
 | `cause_general`, `cause_specific` | General and specific cause-of-death information |
 | `illspec`, `drugspec`, `selfspec`, `accspec`, `suicspec`, `homispec`, `otherspec`, `place`, `evaluate`, `cause` | MCI codebook–defined cause-of-death detail fields |
-| `is_mci`, `is_doc` | Indicators of source program (federal MCI vs. state DOC) |
 
 ## Known Limitations
 
