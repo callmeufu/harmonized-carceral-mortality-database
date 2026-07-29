@@ -841,6 +841,9 @@ df.to_excel("code/cod_algorithm/c_01_sample_results_ICD.xlsx", index=False)
 output<-read_xlsx("code/cod_algorithm/c_01_sample_results_ICD.xlsx")
 
 output%>%filter(is.na(CAUSE))%>%count()
+output%>%filter(CAUSE == "")%>%count()
+output %>% count(CAUSE, sort = TRUE)
+
 
 output%>%filter(FINAL_CAUSE!="UNDETERMINED"|NA)%>%count()
 
@@ -856,4 +859,6 @@ output_little<-output%>%select(CAUSE, MATCHED_KEYWORD, FINAL_CAUSE, CLASS_LEVEL_
 
 outputlittlenas<-output_little%>%filter(is.na(CLASS_LEVEL_2))%>%filter(is.na(CLASS_LEVEL_3))%>%filter(!is.na(CLASS_LEVEL_1))
 
+
+write_xlsx(output_little, "code/cod_algorithm/z_archived/sample_output_little.xlsx")
 ```
