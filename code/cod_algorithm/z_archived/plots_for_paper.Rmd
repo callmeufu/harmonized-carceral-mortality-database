@@ -195,32 +195,19 @@ summary(combined$age)
 ```{r barchart}
 library(readxl)
 output <- read_excel("code/cod_algorithm/b_02_full_results_ICD.xlsx")
-output%>%group_by(FINAL_CAUSE)%>%count()
 
-output_level4 <- output %>%
-  filter(FINAL_CAUSE %in% c(
-    "CANCER",
-    "CARDIOVASCULAR DISEASE",
-    "COVID-19",
-    "HEAT",
-    "HOMICIDE",
-    "NEUROPSYCHIATRIC ILLNESS",
-    "OVERDOSE",
-    "RESPIRATORY DISEASE",
-    "SUICIDE",
-    "UNDETERMINED"
-  ))
+output%>%count(class)
 
-top4 <- output_level4 %>% 
-  count(FINAL_CAUSE, sort = TRUE) %>%
+top4 <- output %>% 
+  count(CLASS_LEVEL_3, sort = TRUE) %>%
   slice_head(n = 4) %>%
-  pull(FINAL_CAUSE)
+  pull(CLASS_LEVEL_3)
 
-barchart <- output_level4 %>%
+barchart <- output %>%
   mutate(
-    cause = if_else(FINAL_CAUSE %in% top4,
-                    FINAL_CAUSE,
-                    "ALL OTHER")
+    cause = if_else(CLASS_LEVEL_3 %in% top4,
+                    CLASS_LEVEL_3,
+                    "All Other")
   ) %>%
   count(cause) %>%
   mutate(cause = fct_reorder(cause, n))
@@ -235,7 +222,10 @@ ggplot(barchart,
   ) +
   theme_classic(base_size = 12)
 
-output %>%count(FINAL_CAUSE, sort = TRUE)
+
+
+
+
 ```
 
 #age and sex
