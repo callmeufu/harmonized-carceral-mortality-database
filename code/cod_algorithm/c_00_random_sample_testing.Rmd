@@ -21,7 +21,7 @@ combined<-read.csv("fitting_mci_doc_cod/mci_doc_combined.csv")
 
 set.seed(45)
 random_sample <- combined %>% slice_sample(n = 100)
-write_csv(random_sample, "fitting_mci_doc_cod/random_sample.csv")
+write_csv(random_sample, "cod_algorithm/random_sample.csv")
 ```
 
 ```{r fitting to template}
