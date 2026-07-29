@@ -17,8 +17,8 @@ py_require("numpy")
 py_require("openpyxl")
 py_require("rapidfuzz")
 
-template<-read_xlsx("a_02_COD Coding Input template.xlsx")
-combined <- readRDS("~/Documents/GitHub/harmonized_carceral_mortality_data/data/a_02_mortality_data_post_processed/combined_mortality_data.rds")
+template<-read_xlsx("code/cod_algorithm/a_02_COD Coding Input template.xlsx")
+combined<-read_rds("data/hcmd.rds")
 
 ```
 
@@ -129,7 +129,7 @@ template1$CAUSE <- sub(
 
 
 
-write_xlsx(template1, "z_archived/COD Coding Input template_1.xlsx")
+write_xlsx(template1, "code/cod_algorithm/z_archived/COD Coding Input template_1.xlsx")
 ```
 
 ```{python adaptedalgorithm str85 newcategories}
@@ -140,10 +140,10 @@ import re
 
 # CONFIG
 
-excel_file_name = "z_archived/COD Coding Input template_1.xlsx"
+excel_file_name = "code/cod_algorithm/z_archived/COD Coding Input template_1.xlsx"
 sub_sheet = "Sheet1"
 
-keywords_excel = "a_03_final_kw_v1.xlsx"
+keywords_excel = "code/cod_algorithm/a_03_final_kw_v1.xlsx"
 kw_sub_sheet = "kw_icd_categories"
 
 FUZZY_THRESHOLD = 85
@@ -343,9 +343,27 @@ df["FINAL_INTERNAL"] = (
     df["FINAL_NON_COMM_DISEASE"]
 )
 
-df["CAUSE_UNDETERMINED"] = df["FINAL_UNDETERMINED"]
+cause_cols = [
+    "FINAL_COMM_DISEASE",
+    "FINAL_NON_COMM_DISEASE",
+    "FINAL_EXTERNAL",
+    "FINAL_ACCIDENTAL_CAUSE",
+    "FINAL_SUICIDE_CAUSE",
+    "FINAL_HOMICIDE_CAUSE",
+    "FINAL_OD",
+    "FINAL_COLD",
+    "FINAL_HEAT",
+    "FINAL_CARDIO",
+    "FINAL_RESP",
+    "FINAL_CA",
+    "FINAL_NEURO",
+    "FINAL_COVID",
+]
 
-#LEVEL STRUCTURE 
+df["FINAL_UNDETERMINED"] = (
+    df["FINAL_UNDETERMINED"] |
+    ~df[specific_cause_cols].fillna(False).any(axis=1)
+)
 
 # MANUAL FLAG
 
@@ -404,7 +422,7 @@ def get_level1(row):
         return "Internal (Natural Death)"
     if row["FINAL_UNDETERMINED"]:
         return "Undetermined"
-    return ""
+    return "Undetermined"
 
 #level2
 def get_level2(row):
@@ -424,7 +442,7 @@ def get_level2(row):
     if row["FINAL_UNDETERMINED"]:
         return "Undetermined"
 
-    return ""
+    return "Undetermined"
 
 #level3
 def get_level3(row):
@@ -476,14 +494,14 @@ def get_level3(row):
     if row["FINAL_UNDETERMINED"]:
         return "Undetermined"
 
-    return ""
+    return "Undetermined"
 
 df["CLASS_LEVEL_1"] = df.apply(get_level1, axis=1)
 df["CLASS_LEVEL_2"] = df.apply(get_level2, axis=1)
 df["CLASS_LEVEL_3"] = df.apply(get_level3, axis=1)
 
 
-df.to_excel("b_02_full_results_ICD.xlsx", index=False)
+df.to_excel("code/cod_algorithm/b_02_full_results_ICD.xlsx", index=False)
 
 
 ```
@@ -491,7 +509,7 @@ df.to_excel("b_02_full_results_ICD.xlsx", index=False)
 
 
 ```{r lookingatoutput}
-output<-read_xlsx("b_02_full_results_ICD.xlsx")
+output<-read_xlsx("code/cod_algorithm/b_02_full_results_ICD.xlsx")
 
 output%>%filter(is.na(CAUSE))%>%count()
 
@@ -506,6 +524,8 @@ output%>%count(CLASS_LEVEL_2, sort = TRUE)
 output%>%count(CLASS_LEVEL_3, sort = TRUE)
 
 output_little<-output%>%select(CAUSE, MATCHED_KEYWORD, FINAL_CAUSE, CLASS_LEVEL_1, CLASS_LEVEL_2, CLASS_LEVEL_3)
+
+
 
 outputlittlenas<-output_little%>%filter(is.na(CLASS_LEVEL_2))%>%filter(is.na(CLASS_LEVEL_3))%>%filter(!is.na(CLASS_LEVEL_1))
 ```

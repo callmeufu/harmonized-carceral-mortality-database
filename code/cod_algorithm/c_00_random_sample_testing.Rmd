@@ -16,49 +16,62 @@ py_require("numpy")
 py_require("openpyxl")
 py_require("rapidfuzz")
 
-template<-read_xlsx("fitting_mci_doc_cod/COD Coding Input template.xlsx")
-combined<-read.csv("fitting_mci_doc_cod/mci_doc_combined.csv")
+template<-read_xlsx("code/cod_algorithm/a_02_COD Coding Input template.xlsx")
+combined<-read_rds("data/hcmd.rds")
 
 set.seed(45)
 random_sample <- combined %>% slice_sample(n = 100)
-write_csv(random_sample, "cod_algorithm/random_sample.csv")
+write_csv(random_sample, "code/cod_algorithm/z_archived/random_sample.csv")
 ```
 
 ```{r fitting to template}
 sample_template <- random_sample %>%
   transmute(
-    CASE_NUMBER = X,
-    MANNER = cause_of_death,
-
-   CAUSE = coalesce(
-      illspec,
-      drugspec,
-      homispec,
-      suicspec,
-      selfspec,
-      accspec,
-      otherspec, 
-      cause_specific
+    CASE_NUMBER = case_number,
+    CAUSE = paste(
+      cause_general,
+      coalesce(
+        illspec,
+        drugspec,
+        homispec,
+        suicspec,
+        selfspec,
+        accspec,
+        otherspec,
+        cause_specific
+      ),
+      sep = ": "
     )
   )
 
-sample_template %>%summarise(n_missing = sum(is.na(MANNER) | MANNER == "")) #12
-sample_template %>%summarise(n_missing = sum(is.na(CAUSE) | CAUSE == "")) #31
-sample_template%>%filter(!is.na(CAUSE))%>%filter(!is.na(MANNER))%>%count()
-length(unique(random_sample$state_abbrev))
-random_sample%>%group_by(is_doc)%>%count()
-random_sample%>%group_by(is_mci)%>%count()
+#checking to make sure missingness pattern matches combined dataset 
+sample_template%>%filter(is.na(CAUSE))%>%count() #0
+sample_template%>%count(CAUSE, sort= TRUE)
+sample_template$CAUSE[sample_template$CAUSE == "NA: NA"]<-NA 
+sample_template%>%filter(is.na(CAUSE))%>%count() #4249
 
-#pre-cleaning to fix suicide containing OD 
-sample_template %>%count(MANNER, sort = TRUE)
 
-sample_template$MANNER[sample_template$MANNER == "Suicide (e.g. hanging, knife/cutting instrument, intentional drug overdose) – describe events"] <- "Suicide"
+#cleaning template to shorten cause_general SUICIDE description 
+sample_template %>%count(CAUSE, sort = TRUE)
+
+sample_template$CAUSE <- sub(
+  "^Suicide.*?:",
+  "Suicide:",
+  sample_template$CAUSE,
+  ignore.case = TRUE
+)
 
 #doing same for aids related illness
-sample_template$MANNER[sample_template$MANNER == "Illness (exclude AIDS-related deaths), specify illness"] <- "Illness"
+sample_template$CAUSE <- sub(
+  "^Illness.*?:",
+  "Illness:",
+  sample_template$CAUSE,
+  ignore.case = TRUE
+)
 
 
-write_xlsx(sample_template, "z_archived/sample_template.xlsx")
+
+write_xlsx(sample_template, "code/cod_algorithm/z_archived/sample_template.xlsx")
 ```
 
 ##Putting sample through old algorithm
@@ -450,8 +463,7 @@ tbl2<-sample_output_og_algorithm%>%
 ```
 
 ## putting sample through new algorithm 
-
-```{python adaptedalgorithm str85 newcategories}
+```{python samplenew}
 import pandas as pd
 import numpy as np
 from rapidfuzz import fuzz
@@ -459,10 +471,10 @@ import re
 
 # CONFIG
 
-excel_file_name = "z_archived/sample_template.xlsx"
+excel_file_name = "code/cod_algorithm/z_archived/sample_template.xlsx"
 sub_sheet = "Sheet1"
 
-keywords_excel = "a_03_final_kw_v1.xlsx"
+keywords_excel = "code/cod_algorithm/a_03_final_kw_v1.xlsx"
 kw_sub_sheet = "kw_icd_categories"
 
 FUZZY_THRESHOLD = 85
@@ -472,8 +484,8 @@ FUZZY_THRESHOLD = 85
 
 df = pd.read_excel(excel_file_name, sheet_name=sub_sheet, engine="openpyxl")
 
-df["MANNER"] = df["CAUSE_GENERAL"].fillna("").astype(str).str.strip().str.upper()
-df["CAUSE"] = df["CAUSE_SPECIFIC"].fillna("").astype(str).str.strip().str.upper()
+
+df["CAUSE"] = df["CAUSE"].fillna("").astype(str).str.strip().str.upper()
 
 
 # LOAD KEYWORDS
@@ -501,19 +513,10 @@ internal_keywords = clean("INTERNAL KEYWORDS")
 unk_keywords = clean("UNDETERMINED")
 
 
-# CAUSE/MANNER FALLBACK LOGIC
 
 df["CAUSE_FOR_CLASS"] = df["CAUSE"]
 
 missing_cause = df["CAUSE_FOR_CLASS"].eq("")
-
-df.loc[missing_cause, "CAUSE_FOR_CLASS"] = df.loc[missing_cause, "MANNER"]
-
-df["MANNER_FOR_CLASS"] = df["MANNER"]
-
-missing_manner = df["MANNER_FOR_CLASS"].eq("")
-
-df.loc[missing_manner, "MANNER_FOR_CLASS"] = df.loc[missing_manner, "CAUSE"]
 
 
 # INITIAL FLAGS
@@ -628,35 +631,6 @@ for flag, kws in cause_groups.items():
             df.loc[idx, "MATCH_SCORE"] = best_score
             df.loc[idx, "MATCH_TYPE"] = "Fuzzy"
 
-# MANNER FLAGS
-
-df["MANNER_HOMICIDE"] = df["MANNER_FOR_CLASS"].apply(
-    lambda x: fuzz.token_set_ratio(x, "HOMICIDE") >= FUZZY_THRESHOLD
-)
-
-df["MANNER_SUICIDE"] = df["MANNER_FOR_CLASS"].apply(
-    lambda x: fuzz.token_set_ratio(x, "SUICIDE") >= FUZZY_THRESHOLD
-)
-
-df["MANNER_ACCIDENTAL"] = df["MANNER_FOR_CLASS"].apply(
-    lambda x: fuzz.token_set_ratio(x, "ACCIDENTAL") >= FUZZY_THRESHOLD
-)
-
-df["MANNER_NATURAL"] = df["MANNER_FOR_CLASS"].apply(
-    lambda x: (
-        fuzz.token_set_ratio(x, "NATURAL") >= FUZZY_THRESHOLD
-        or 
-        fuzz.token_set_ratio(x, "ILLNESS") >= FUZZY_THRESHOLD
-    )
-)
-
-df["MANNER_UNKNOWN"] = df["MANNER_FOR_CLASS"].apply(
-    lambda x: (
-        fuzz.token_set_ratio(x, "UNKNOWN") >= FUZZY_THRESHOLD
-        or
-        fuzz.token_set_ratio(x, "UNDETERMINED") >= FUZZY_THRESHOLD
-    )
-)
 
 # CAUSE STRUCTURE
 
@@ -700,9 +674,27 @@ df["FINAL_INTERNAL"] = (
     df["FINAL_NON_COMM_DISEASE"]
 )
 
-df["CAUSE_UNDETERMINED"] = df["FINAL_UNDETERMINED"]
+cause_cols = [
+    "FINAL_COMM_DISEASE",
+    "FINAL_NON_COMM_DISEASE",
+    "FINAL_EXTERNAL",
+    "FINAL_ACCIDENTAL_CAUSE",
+    "FINAL_SUICIDE_CAUSE",
+    "FINAL_HOMICIDE_CAUSE",
+    "FINAL_OD",
+    "FINAL_COLD",
+    "FINAL_HEAT",
+    "FINAL_CARDIO",
+    "FINAL_RESP",
+    "FINAL_CA",
+    "FINAL_NEURO",
+    "FINAL_COVID",
+]
 
-#LEVEL STRUCTURE 
+df["FINAL_UNDETERMINED"] = (
+    df["FINAL_UNDETERMINED"] |
+    ~df[cause_cols].fillna(False).any(axis=1)
+)
 
 # MANUAL FLAG
 
@@ -711,44 +703,6 @@ df["MANUAL"] = ~(
     df["FINAL_INTERNAL"] |
     df["FINAL_UNDETERMINED"]
 )
-
-# COD ASSIGNMENT
-
-df["COD"] = 0
-
-df.loc[df["FINAL_UNDETERMINED"], "COD"] = 99
-df.loc[df["MANUAL"], "COD"] = 0
-df.loc[df["FINAL_OD"], "COD"] = 1
-df.loc[df["FINAL_COLD"], "COD"] = 2
-df.loc[df["FINAL_HEAT"], "COD"] = 3
-df.loc[df["FINAL_SUICIDE_CAUSE"], "COD"] = 4
-df.loc[df["FINAL_HOMICIDE_CAUSE"], "COD"] = 5
-df.loc[df["FINAL_CARDIO"], "COD"] = 6
-df.loc[df["FINAL_RESP"], "COD"] = 7
-df.loc[df["FINAL_CA"], "COD"] = 8
-df.loc[df["FINAL_NEURO"], "COD"] = 9
-df.loc[df["FINAL_COVID"], "COD"] = 10
-df.loc[df["FINAL_COMM_DISEASE"], "COD"] = 11
-df.loc[df["FINAL_NON_COMM_DISEASE"], "COD"] = 12
-df.loc[df["FINAL_CAUSE_ACCIDENTAL"], "COD"] = 13
-df.loc[df["FINAL_EXTERNAL"], "COD"] = 14
-df.loc[df["FINAL_INTERNAL"], "COD"] = 15
-
-
-# FINAL STRING OUTPUT COLUMNS
-
-def get_final_manner(row):
-    if row["MANNER_SUICIDE"]:
-        return "SUICIDE"
-    if row["MANNER_HOMICIDE"]:
-        return "HOMICIDE"
-    if row["MANNER_ACCIDENTAL"]:
-        return "ACCIDENTAL"
-    if row["MANNER_NATURAL"]:
-        return "NATURAL"
-    if row["MANNER_UNKNOWN"]:
-        return "UNKNOWN"
-    return "UNKNOWN"
 
 
 def get_final_cause(row):
@@ -786,8 +740,8 @@ def get_final_cause(row):
         return "UNDETERMINED"
     return "UNDETERMINED"
 
-df["FINAL_MANNER_TEXT"] = df.apply(get_final_manner, axis=1)
-df["FINAL_CAUSE_TEXT"] = df.apply(get_final_cause, axis=1)
+
+df["FINAL_CAUSE"] = df.apply(get_final_cause, axis=1)
 
 #LEVELS
 
@@ -799,7 +753,7 @@ def get_level1(row):
         return "Internal (Natural Death)"
     if row["FINAL_UNDETERMINED"]:
         return "Undetermined"
-    return ""
+    return "Undetermined"
 
 #level2
 def get_level2(row):
@@ -819,7 +773,7 @@ def get_level2(row):
     if row["FINAL_UNDETERMINED"]:
         return "Undetermined"
 
-    return ""
+    return "Undetermined"
 
 #level3
 def get_level3(row):
@@ -871,16 +825,35 @@ def get_level3(row):
     if row["FINAL_UNDETERMINED"]:
         return "Undetermined"
 
-    return ""
+    return "Undetermined"
 
-df["LEVEL_1"] = df.apply(get_level1, axis=1)
-df["LEVEL_2"] = df.apply(get_level2, axis=1)
-df["LEVEL_3"] = df.apply(get_level3, axis=1)
+df["CLASS_LEVEL_1"] = df.apply(get_level1, axis=1)
+df["CLASS_LEVEL_2"] = df.apply(get_level2, axis=1)
+df["CLASS_LEVEL_3"] = df.apply(get_level3, axis=1)
 
 
-df.to_excel("c_01_sample_results_ICD.xlsx", index=False)
-
+df.to_excel("code/cod_algorithm/c_01_sample_results_ICD.xlsx", index=False)
 
 ```
-```
 
+#checking sample results with new 
+```{r samplenew}
+output<-read_xlsx("code/cod_algorithm/c_01_sample_results_ICD.xlsx")
+
+output%>%filter(is.na(CAUSE))%>%count()
+
+output%>%filter(FINAL_CAUSE!="UNDETERMINED"|NA)%>%count()
+
+output%>%group_by(FINAL_CAUSE)%>%count()
+
+output %>% count(FINAL_CAUSE, sort = TRUE)
+
+output%>%count(CLASS_LEVEL_1, sort = TRUE)
+output%>%count(CLASS_LEVEL_2, sort = TRUE)
+output%>%count(CLASS_LEVEL_3, sort = TRUE)
+
+output_little<-output%>%select(CAUSE, MATCHED_KEYWORD, FINAL_CAUSE, CLASS_LEVEL_1, CLASS_LEVEL_2, CLASS_LEVEL_3)
+
+outputlittlenas<-output_little%>%filter(is.na(CLASS_LEVEL_2))%>%filter(is.na(CLASS_LEVEL_3))%>%filter(!is.na(CLASS_LEVEL_1))
+
+```
