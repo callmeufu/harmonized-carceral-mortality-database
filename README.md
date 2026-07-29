@@ -2,7 +2,7 @@
 
 The Harmonized Carceral Mortality Database (HCMD) is a unified, georeferenced dataset of deaths occurring in U.S. state-operated correctional facilities. It is compiled and harmonized from multiple administrative, nonprofit, and public-records sources. The HCMD standardizes decedent characteristics, facility identifiers, dates of death, and causes of death to enable more consistent epidemiological analyses of custodial mortality in the United States, independent of federal reporting programs.
 
-The dataset currently includes: 
+The dataset ('data/hcmd.rds') currently includes: 
 
 - **49,682** mortality records; 85.7% (n = 42,584) have algorithmically estimated cause of death
 - All 50 states have at least some records available
