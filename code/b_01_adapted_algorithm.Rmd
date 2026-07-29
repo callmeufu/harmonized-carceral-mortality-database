@@ -542,102 +542,12 @@ output$matched_keyword<-output$MATCHED_KEYWORD
 hcmd <- combined %>%
   left_join(
     output %>%
-      select(case_number, final_cause, matched_keyword, class_level_1, class_level_2, class_level_3),
+      select(case_number, matched_keyword, class_level_1, class_level_2, class_level_3),
     by = "case_number"
   )
 
-saveRDS(hcmd, "../../data/hcmd.rds")
+saveRDS(hcmd, "data/hcmd.rds")
 
 ```
 
 
-#extra testing
-```{r extra}
-manner_vars <- c("ACCIDENT", "NATURAL", "HOMICIDE", "SUICIDE",
-  "UNKNOWN", "PENDING") 
-
-
-output%>%
-  filter(!if_any(all_of(manner_vars), ~ . == TRUE)) %>%
-  count() 
-
-output%>%
-  filter(if_any(all_of(manner_vars), ~ . == TRUE)) %>%
-  count() 
-
-
-
- cause_vars <- c(
-  "FINAL_OD", "FINAL_HEAT", "FINAL_COLD",
-  "FINAL_SUICIDE_CAUSE", "FINAL_HOMICIDE_CAUSE", "FINAL_CARDIO", "FINAL_RESP", "FINAL_CA",
-  "FINAL_NEURO", "FINAL_ACCIDENTAL_CAUSE", "FINAL_UNDETERMINED",
-  "FINAL_EXTERNAL", "FINAL_INTERNAL",
-  "FINAL_COMM_DISEASE", "FINAL_NON_COMM_DISEASE")
-
-
-output%>%
-  filter(!if_any(all_of(cause_vars), ~ . == TRUE)) %>%
-  count() #13466
-
-output%>%
-  filter(if_any(all_of(cause_vars), ~ . == TRUE)) %>%
-  count() #36216
-
-
-output %>%
-  summarise(across(
-    all_of(cause_vars),
-    ~ sum(. == TRUE, na.rm = TRUE)
-  )) %>%
-  pivot_longer(
-    cols = everything(),
-    names_to = "variable",
-    values_to = "n_true"
-  ) %>%
-  arrange(desc(n_true))
-
-#count both
-sample_output_adapted_algorithm%>%
-  filter(if_any(all_of(cause_vars), ~ . == TRUE)) %>% filter(if_any(all_of(manner_vars), ~ . == TRUE))%>%count() 
-
-#what is not included
-
-tblnone1<-sample_output_adapted_algorithm%>%
-  filter(!if_any(all_of(manner_vars), ~ . == TRUE)) 
-
-#types of manners not classified 
-tblnone1%>%group_by(MANNER)%>%count()
-tblnone1 %>% 
-  group_by(MANNER) %>% 
-  summarise(n = n()) %>% 
-  arrange(desc(n))%>%head()
-
-
-tblnone1<-sample_output_adapted_algorithm%>%
-  filter(!if_any(all_of(cause_vars), ~ . == TRUE)) 
-
-#types of causes not classified 
-tblnone1 %>% 
-  group_by(CAUSE) %>% 
-  summarise(n = n()) %>% 
-  arrange(desc(n))%>%head()
-
-tbl1has<-sample_output_og_algorithm%>%
-  filter(if_any(all_of(cod_vars), ~ . == TRUE)) 
-
-#manners that were classified
-tbl1has %>% 
-  group_by(MANNER) %>% 
-  summarise(n = n()) %>% 
-  arrange(desc(n))
-
-#causes that were classified
-tbl1has %>% 
-  group_by(CAUSE) %>% 
-  summarise(n = n()) %>% 
-  arrange(desc(n))
-
-tbl<-sample_output_adapted_algorithm%>%
-  filter(if_any(all_of(cause_vars), ~ . == TRUE)) %>% filter(if_any(all_of(manner_vars), ~ . == TRUE))
-
-```
