@@ -922,6 +922,8 @@ df.to_excel(
 output<-read_xlsx("code/cod_algorithm/b_02_full_results_ICD.xlsx")
 
 output%>%filter(is.na(CAUSE))%>%count()
+output%>%filter(!is.na(CAUSE))%>%count()
+output%>%count(CAUSE, sort = TRUE)
 
 output%>%filter(FINAL_CAUSE!="UNDETERMINED"|NA)%>%count()
 
