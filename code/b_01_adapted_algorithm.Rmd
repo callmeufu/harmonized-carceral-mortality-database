@@ -935,6 +935,10 @@ output%>%count(CLASS_LEVEL_1, sort = TRUE)
 output%>%count(CLASS_LEVEL_2, sort = TRUE)
 output%>%count(CLASS_LEVEL_3, sort = TRUE)
 
+output%>%filter(CLASS_LEVEL_3!="Undetermined")%>%count()
+output%>%filter(CLASS_LEVEL_2!="Undetermined")%>%count()
+output%>%filter(CLASS_LEVEL_1!="Undetermined")%>%count()
+
 output_little<-output%>%select(CAUSE, MATCHED_KEYWORD, FINAL_CAUSE, CLASS_LEVEL_1, CLASS_LEVEL_2, CLASS_LEVEL_3)
 
 
