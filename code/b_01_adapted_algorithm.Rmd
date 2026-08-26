@@ -81,7 +81,7 @@ combined %>%
 ```
 
 
-fitting combined into template 1 where cause = COD general and specific (concatenated) 
+fitting combined dataset into template 1 where cause = COD general and specific (concatenated) 
 ```{r fitting}
  template1 <- combined %>%
   transmute(
@@ -132,6 +132,7 @@ template1$CAUSE <- sub(
 write_xlsx(template1, "code/cod_algorithm/z_archived/COD Coding Input template_1.xlsx")
 ```
 
+putting template through an algorithm that assigns standardized COD output
 ```{python levelsmatch}
 import pandas as pd
 import numpy as np
@@ -280,8 +281,8 @@ cause_groups = {
 #
 #   MATCH_COUNT
 #   MATCHED_KEYWORDS
-#   PRIMARY_CLASS_LEVEL_3
-#   SECONDARY_CLASS_LEVEL_3
+#   CLASS_LEVEL_3_A
+#   CLASS_LEVEL_3_B
 #
 # Structural categories such as FINAL_INTERNAL and
 # FINAL_EXTERNAL are NOT included here.
@@ -340,8 +341,8 @@ df["MATCH_TYPE"] = ""
 
 df["MATCH_COUNT"] = 0
 df["MATCHED_KEYWORDS"] = ""
-df["PRIMARY_CLASS_LEVEL_3"] = ""
-df["SECONDARY_CLASS_LEVEL_3"] = ""
+df["CLASS_LEVEL_3_A"] = ""
+df["CLASS_LEVEL_3_B"] = ""
 
 
 # ============================================================
@@ -575,18 +576,18 @@ for idx, text in df["CAUSE_FOR_CLASS"].items():
 
 
     # ========================================================
-    # PRIMARY LEVEL 3
+    # LEVEL 3 A
     # ========================================================
 
     primary = level3_matches[0]
 
-    df.loc[idx, "PRIMARY_CLASS_LEVEL_3"] = (
+    df.loc[idx, "CLASS_LEVEL_3_A"] = (
         class3_labels[primary["flag"]]
     )
 
 
     # ========================================================
-    # SECONDARY LEVEL 3
+    # LEVEL 3 B
     # ========================================================
 
     secondary = level3_matches[1:]
@@ -608,7 +609,7 @@ for idx, text in df["CAUSE_FOR_CLASS"].items():
         )
 
 
-        df.loc[idx, "SECONDARY_CLASS_LEVEL_3"] = (
+        df.loc[idx, "CLASS_LEVEL_3_B"] = (
             " | ".join(secondary_classes)
         )
 
