@@ -21,7 +21,7 @@ In response, researchers and nonprofits — including the [UCLA Law Behind Bars 
 
 ## Methods
 
-Full methodological detail is available in the accompanying data descriptor paper [INSERT LINK]. In brief:
+Full methodological detail is available in the accompanying [preprint](https://doi.org/10.64898/2026.07.29.26359256). In brief:
 
 ### Data Sources
 
@@ -104,10 +104,7 @@ Key columns in the harmonized dataset include:
 
 ## Citation
 
-If you use the HCMD in your work, please cite:
-
-> [Author names]. Harmonized Carceral Mortality Database (HCMD). [Year]. [DOI / repository link]
-
+If you use the HCMD in your work, please cite: https://doi.org/10.64898/2026.07.29.26359256
 
 ## License
 
