@@ -98,6 +98,46 @@ Key columns in the harmonized dataset include:
 
 ## Usage
 
+Users can create a personal version of `hcmd.rds` by adding their own mortality data and running the processing pipeline described below.
+
+### 1. Add raw mortality data
+
+Place additional mortality records in:
+
+`data/a_00_mortality_data_raw/`
+
+The raw mortality data are processed using:
+
+* `code/a_00_all_facility_dictionaries.py`
+* `code/a_00_configs`
+* `code/a_01_mortality_processing_template.py`
+
+### 2. Process the raw data
+
+Once `code/a_01_mortality_processing_template.py` is run, the processed mortality data will be saved to:
+
+`data/a_01_mortality_data_processed/`
+
+### 3. Post-process the mortality data
+
+The processed mortality data are then post-processed using:
+
+`code/a_02_post_process_mortality_data`
+
+This produces `combined_mortality_data.rds`, which is saved to:
+
+`data/a_02_mortality_data_post_processed/`
+
+### 4. Run the COD-standardization algorithm
+
+`combined_mortality_data.rds` is then processed using:
+
+`code/b_02_adapted_algorithm`
+
+This produces the final `hcmd.rds` dataset, which is saved to:
+
+`data/hcmd.rds`
+
 
 ## Known Limitations
 
