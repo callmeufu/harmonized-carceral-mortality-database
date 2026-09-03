@@ -21,7 +21,7 @@ py_require("openpyxl")
 py_require("rapidfuzz")
 
 #reading in the template 
-template<-read_xlsx("code/cod_algorithm/a_02_COD Coding Input template.xlsx")
+template<-read_xlsx("code/b_01_COD Coding Input template.xlsx")
 
 #reading in the decedent data
 combined <- readRDS("data/a_02_mortality_data_post_processed/combined_mortality_data.rds")
@@ -139,10 +139,10 @@ template1$CAUSE <- sub(
 
 
 #saving template into archived folder to be used in algorithm
-write_xlsx(template1, "code/cod_algorithm/z_archived/COD Coding Input template_1.xlsx")
+write_xlsx(template1, "code/cod_algorithm_extras/z_archived/COD Coding Input template_1.xlsx")
 ```
 
-putting template through an algorithm that assigns standardized COD output
+#putting template through an algorithm (in python) that assigns standardized COD output
 ```{python levelsmatch}
 import pandas as pd
 import numpy as np
@@ -150,22 +150,19 @@ from rapidfuzz import fuzz
 import re
 
 
-# ============================================================
-# CONFIG
-# ============================================================
-
-excel_file_name = "code/cod_algorithm/z_archived/COD Coding Input template_1.xlsx"
+#loading template
+excel_file_name = "code/cod_algorithm_extras/z_archived/COD Coding Input template_1.xlsx"
 sub_sheet = "Sheet1"
 
-keywords_excel = "code/cod_algorithm/a_03_final_kw_v1.xlsx"
+#loading keyword lexicon 
+keywords_excel = "code/b_00_final_kw_v1.xlsx"
 kw_sub_sheet = "kw_icd_categories"
 
+#keywords are matched with 85% similarity 
 FUZZY_THRESHOLD = 85
 
 
-# ============================================================
-# LOAD DATA
-# ============================================================
+#configuring data
 
 df = pd.read_excel(
     excel_file_name,
@@ -182,9 +179,7 @@ df["CAUSE"] = (
 )
 
 
-# ============================================================
-# LOAD KEYWORDS
-# ============================================================
+#configuring keywords
 
 kw_df = pd.read_excel(
     keywords_excel,
@@ -222,18 +217,8 @@ internal_keywords = clean("INTERNAL KEYWORDS")
 unk_keywords = clean("UNDETERMINED")
 
 
-# ============================================================
-# CAUSE FOR CLASSIFICATION
-# ============================================================
 
-df["CAUSE_FOR_CLASS"] = df["CAUSE"]
-
-missing_cause = df["CAUSE_FOR_CLASS"].eq("")
-
-
-# ============================================================
-# INITIAL FLAGS
-# ============================================================
+#flagging categories for binary output
 
 flags = [
     "FINAL_OD",
@@ -258,10 +243,7 @@ for f in flags:
     df[f] = False
 
 
-# ============================================================
-# ALL CAUSE GROUPS
-# ============================================================
-
+#assigning cause groups 
 cause_groups = {
     "FINAL_OD": od_keywords,
     "FINAL_COLD": cold_keywords,
@@ -282,21 +264,9 @@ cause_groups = {
 }
 
 
-# ============================================================
-# ORIGINAL LEVEL 3 CATEGORIES
-# ============================================================
-#
-# IMPORTANT:
-# Only these categories are used for:
-#
-#   MATCH_COUNT
-#   MATCHED_KEYWORDS
-#   CLASS_LEVEL_3_A
-#   CLASS_LEVEL_3_B
-#
-# Structural categories such as FINAL_INTERNAL and
-# FINAL_EXTERNAL are NOT included here.
-# ============================================================
+# creating match_count, match_keywords and levela and levelb categories for class_level_3 
+
+#level3 potential groups (most specific possible COD classifications)
 
 level3_groups = {
     "FINAL_COLD": cold_keywords,
@@ -315,9 +285,7 @@ level3_groups = {
 }
 
 
-# ============================================================
-# LEVEL 3 LABELS
-# ============================================================
+#level3 labels 
 
 class3_labels = {
     "FINAL_COLD": "Cold-related death",
@@ -336,47 +304,29 @@ class3_labels = {
 }
 
 
-# ============================================================
-# EXISTING MATCH TRACKING
-# ============================================================
-
+#replicating match tracking process
 df["MATCHED_KEYWORD"] = ""
 df["MATCH_SCORE"] = np.nan
 df["MATCH_TYPE"] = ""
 
 
-# ============================================================
-# NEW LEVEL 3 TRACKING
-# ============================================================
-
-df["MATCH_COUNT"] = 0
-df["MATCHED_KEYWORDS"] = ""
-df["CLASS_LEVEL_3_A"] = ""
-df["CLASS_LEVEL_3_B"] = ""
+#and adding additional match categories specific to level3
+df["MATCH_COUNT"] = 0 #how many matches were made
+df["MATCHED_KEYWORDS"] = "" #which words were matched
+df["CLASS_LEVEL_3_A"] = "" #captures the first possible match in level3
+df["CLASS_LEVEL_3_B"] = "" #captures other level3 matches
 
 
-# ============================================================
-# PART 1:
-# ORIGINAL CLASSIFICATION MATCHING
-# ============================================================
-#
-# This preserves the original purpose of the algorithm:
-# find keywords and set the appropriate FINAL_* flags.
-#
-# This includes structural categories such as INTERNAL and
-# EXTERNAL because those are needed for Level 1/2.
-# ============================================================
+#classification matching logic first reads for exact matches
 
 for flag, kws in cause_groups.items():
 
-    # --------------------------------------------------------
-    # EXACT MATCHES
-    # --------------------------------------------------------
+
 
     for kw in kws:
 
         mask = (
-            df["CAUSE_FOR_CLASS"]
+            df["CAUSE"]
             .str.contains(
                 rf"\b{re.escape(kw)}\b",
                 na=False,
@@ -387,13 +337,11 @@ for flag, kws in cause_groups.items():
         df.loc[mask, flag] = True
 
 
-    # --------------------------------------------------------
-    # FUZZY FALLBACK
-    # --------------------------------------------------------
+#and then falls back to fuzzy match (.85 str distance) if no exact match is made
 
     mask = (
         (df[flag] == False) &
-        (df["CAUSE_FOR_CLASS"] != "")
+        (df["CAUSE"] != "")
     )
 
 
@@ -422,20 +370,10 @@ for flag, kws in cause_groups.items():
             df.loc[idx, flag] = True
 
 
-# ============================================================
-# PART 2:
-# LEVEL 3 MATCH TRACKING ONLY
-# ============================================================
-#
-# This is completely separate from the classification above.
-#
-# ONLY Level 3 keyword groups are searched.
-#
-# Matches are ordered by where the keyword first appears in
-# the original CAUSE text.
-# ============================================================
+# searching for level3 matches, matches are ordered by where the keyword first appears in the original CAUSE text.
 
-for idx, text in df["CAUSE_FOR_CLASS"].items():
+
+for idx, text in df["CAUSE"].items():
 
     if text == "":
         continue
@@ -444,18 +382,13 @@ for idx, text in df["CAUSE_FOR_CLASS"].items():
     level3_matches = []
 
 
-    # --------------------------------------------------------
-    # SEARCH ONLY LEVEL 3 GROUPS
-    # --------------------------------------------------------
 
     for flag, kws in level3_groups.items():
 
         exact_matches_for_group = []
 
 
-        # ====================================================
-        # EXACT MATCHES
-        # ====================================================
+        # exact matches
 
         for kw in kws:
 
@@ -475,18 +408,12 @@ for idx, text in df["CAUSE_FOR_CLASS"].items():
                 })
 
 
-        # Add exact matches
         level3_matches.extend(
             exact_matches_for_group
         )
 
 
-        # ====================================================
-        # FUZZY FALLBACK
-        # ====================================================
-
-        # Only perform fuzzy matching if this Level 3 group
-        # had no exact match.
+        #fuzzy matches 
 
         if len(exact_matches_for_group) == 0:
 
@@ -517,15 +444,8 @@ for idx, text in df["CAUSE_FOR_CLASS"].items():
                 })
 
 
-    # ========================================================
-    # REMOVE DUPLICATE KEYWORDS
-    # ========================================================
-    #
-    # If the same keyword appears multiple times in the text,
-    # count it only once.
-    #
-    # The first occurrence determines its position.
-    # ========================================================
+    # removing duplicate keywords
+
 
     unique_matches = {}
 
@@ -544,9 +464,7 @@ for idx, text in df["CAUSE_FOR_CLASS"].items():
             unique_matches[keyword] = match
 
 
-    # ========================================================
-    # SORT BY FIRST APPEARANCE
-    # ========================================================
+    # sorting by whatever comes first in the text
 
     level3_matches = sorted(
         unique_matches.values(),
@@ -554,26 +472,20 @@ for idx, text in df["CAUSE_FOR_CLASS"].items():
     )
 
 
-    # ========================================================
-    # NO LEVEL 3 MATCHES
-    # ========================================================
+    # counting if no level3 matches
 
     if len(level3_matches) == 0:
         continue
 
 
-    # ========================================================
-    # MATCH COUNT
-    # ========================================================
+    # building match count
 
     df.loc[idx, "MATCH_COUNT"] = len(
         level3_matches
     )
 
 
-    # ========================================================
-    # MATCHED KEYWORDS
-    # ========================================================
+    # building matched keywords
 
     matched_keywords = [
         match["keyword"]
@@ -585,9 +497,7 @@ for idx, text in df["CAUSE_FOR_CLASS"].items():
     )
 
 
-    # ========================================================
-    # LEVEL 3 A
-    # ========================================================
+    # level3a
 
     primary = level3_matches[0]
 
@@ -596,9 +506,7 @@ for idx, text in df["CAUSE_FOR_CLASS"].items():
     )
 
 
-    # ========================================================
-    # LEVEL 3 B
-    # ========================================================
+    # level3b
 
     secondary = level3_matches[1:]
 
@@ -611,8 +519,7 @@ for idx, text in df["CAUSE_FOR_CLASS"].items():
         ]
 
 
-        # Remove duplicate Level 3 categories while keeping
-        # their original order.
+        # removing any duplicates
 
         secondary_classes = list(
             dict.fromkeys(secondary_classes)
@@ -624,12 +531,7 @@ for idx, text in df["CAUSE_FOR_CLASS"].items():
         )
 
 
-    # ========================================================
-    # EXISTING MATCHED_KEYWORD
-    # ========================================================
-    #
-    # Keep the original column as the first Level 3 match.
-    # ========================================================
+    # building match categories
 
     df.loc[idx, "MATCHED_KEYWORD"] = (
         primary["keyword"]
@@ -644,9 +546,7 @@ for idx, text in df["CAUSE_FOR_CLASS"].items():
     )
 
 
-# ============================================================
-# CAUSE STRUCTURE
-# ============================================================
+# building tiered categories
 
 df["FINAL_NON_COMM_DISEASE"] = (
     df["FINAL_NON_COMM_DISEASE"] |
@@ -691,9 +591,7 @@ df["FINAL_INTERNAL"] = (
 )
 
 
-# ============================================================
-# UNDETERMINED
-# ============================================================
+# building undetermined category 
 
 specific_cause_cols = [
     "FINAL_COMM_DISEASE",
@@ -722,9 +620,7 @@ df["FINAL_UNDETERMINED"] = (
 
 
 
-# ============================================================
-# FINAL CAUSE
-# ============================================================
+# building final cause 
 
 def get_final_cause(row):
 
@@ -785,10 +681,7 @@ df["FINAL_CAUSE"] = df.apply(
 )
 
 
-# ============================================================
-# LEVEL 1
-# ============================================================
-
+# building level1
 def get_level1(row):
 
     if row["FINAL_EXTERNAL"]:
@@ -803,9 +696,7 @@ def get_level1(row):
     return "Undetermined"
 
 
-# ============================================================
-# LEVEL 2
-# ============================================================
+# building level2
 
 def get_level2(row):
 
@@ -827,15 +718,11 @@ def get_level2(row):
     return "Undetermined"
 
 
-# ============================================================
-# LEVEL 3
-# ============================================================
+# building level3
 
 def get_level3(row):
 
-    # --------------------------------------------------------
-    # External -> Accidental
-    # --------------------------------------------------------
+    # accidental
 
     if row["FINAL_COLD"]:
         return "Cold-related death"
@@ -850,9 +737,7 @@ def get_level3(row):
         return "Other Accidental"
 
 
-    # --------------------------------------------------------
-    # External -> Intentional
-    # --------------------------------------------------------
+    # intentional
 
     if row["FINAL_SUICIDE_CAUSE"]:
         return "Suicide"
@@ -861,9 +746,7 @@ def get_level3(row):
         return "Homicide"
 
 
-    # --------------------------------------------------------
-    # Internal -> Communicable
-    # --------------------------------------------------------
+    # communicable
 
     if row["FINAL_COVID"]:
         return "COVID-19"
@@ -872,9 +755,7 @@ def get_level3(row):
         return "Other Communicable Disease"
 
 
-    # --------------------------------------------------------
-    # Internal -> Non-Communicable
-    # --------------------------------------------------------
+    # non-communicable
 
     if row["FINAL_CA"]:
         return "Cancer"
@@ -892,9 +773,7 @@ def get_level3(row):
         return "Other Non-Communicable Disease"
 
 
-    # --------------------------------------------------------
-    # Undetermined
-    # --------------------------------------------------------
+    # undetermined
 
     if row["FINAL_UNDETERMINED"]:
         return "Undetermined"
@@ -918,19 +797,17 @@ df["CLASS_LEVEL_3"] = df.apply(
 )
 
 
-# ============================================================
-# EXPORT
-# ============================================================
+#export
 
 df.to_excel(
-    "code/cod_algorithm/b_02_full_results_ICD.xlsx",
+    "code/cod_algorithm_extras/b_02_full_results_ICD.xlsx",
     index=False
 )
 ```
 
 
 ```{r lookingatoutput}
-output<-read_xlsx("code/cod_algorithm/b_02_full_results_ICD.xlsx")
+output<-read_xlsx("code/cod_algorithm_extras/b_02_full_results_ICD.xlsx")
 
 output%>%filter(is.na(CAUSE))%>%count()
 output%>%filter(!is.na(CAUSE))%>%count()
@@ -963,17 +840,16 @@ output$case_number<-output$CASE_NUMBER
 output$final_cause<-output$FINAL_CAUSE
 output$class_level_1<-output$CLASS_LEVEL_1
 output$class_level_2<-output$CLASS_LEVEL_2
-output$class_level_3<-output$CLASS_LEVEL_3
-output$matched_keyword<-output$MATCHED_KEYWORD
+output$class_level_3a<-output$CLASS_LEVEL_3_A
+output$class_level_3b<-output$CLASS_LEVEL_3_B
+output$matched_keywords<-output$MATCHED_KEYWORDS
 
-combined<-combined%>%select(-matched_keyword.x, -matched_keyword.y, -class_level_1.x, -class_level_2.x, -class_level_3.x, -class_level_1.y, -class_level_2.y, -class_level_3.y, -class_level_1, -class_level_2, -class_level_3)
 
-combined<-combined%>%select(-matched_keyword, -final_cause)
 
 hcmd <- combined %>%
   left_join(
     output %>%
-      select(case_number, matched_keyword, class_level_1, class_level_2, class_level_3),
+      select(case_number, matched_keywords, class_level_1, class_level_2, class_level_3a, class_level_3b),
     by = "case_number"
   )
 
@@ -981,4 +857,10 @@ saveRDS(hcmd, "data/hcmd.rds")
 
 ```
 
+#checking that went well
+```{r reading hcmd}
+hcmd<-readRDS("data/hcmd.rds")
+
+
+```
 
