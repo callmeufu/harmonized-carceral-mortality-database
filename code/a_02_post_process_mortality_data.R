@@ -1,6 +1,6 @@
 # This script combines all mortality data processed in a_01_mortality_processing_template;
 # The output of that script is in a_01_mortality_data_processed. This script does some post-processing,
-# specifically renaming and reordering of columns, before being used in 'b_01_adapted_algorithm.Rmd'
+# specifically renaming and reordering of columns, before being used in 'b_02_adapted_algorithm.Rmd'
 
 # 0. Declare root directory and load essential stuff
 project.folder <- paste0(print(here::here()), "/")
