@@ -6,8 +6,11 @@ editor_options:
   chunk_output_type: console
 ---
 
-#this code matches the MCI and DOC causes of death to the template by matching cause_general and cause_specific information (illness, drug, homicide, suicide, etc.) with a standardized, predicted final_cause
+#the final output of this code is the hcmd.rds file with standardized cause of death information for each decedent record. 
+
+#this final output is achieved by fitting decedent records into a template that is to be read by a keyword-matching algorithm that then assigns each record to standdardized COD outputs
 ```{r libraries and data}
+#loading R and python packages
 library(tidyverse)
 library(readxl)
 library(writexl)
@@ -17,23 +20,29 @@ py_require("numpy")
 py_require("openpyxl")
 py_require("rapidfuzz")
 
+#reading in the template 
 template<-read_xlsx("code/cod_algorithm/a_02_COD Coding Input template.xlsx")
-combined<-read_rds("data/a_02_mortality_data_post_processed/combined_mortality_data.rds")
+
+#reading in the decedent data
+combined <- readRDS("data/a_02_mortality_data_post_processed/combined_mortality_data.rds")
 
 ```
 
-looking at both cause_of_death and specific variables to see where missingness may lie
+#this step explores patterns of missingness in the mortality records
 ```{r counting}
 #checking string type of general and specific causes of death
 str(combined$cause_general) #character
 str(combined$illspec) #character
 
-#turning blanks into NA
+#turning blank and NaN entries into NA entries to understand missingness
 combined <- combined %>%mutate(across(where(is.character), ~ na_if(., "")))
-combined%>%filter(is.na(cause_general))%>%count() #7688 have no cause general information
-
 combined <- combined %>%mutate(across(where(is.character), ~ na_if(., "NaN")))
 
+#counting how many entries have NA cause_general information (n=7688 in September 2026 data set)
+combined%>%filter(is.na(cause_general))%>%count() 
+
+
+#counting how many entries have NA cause specific information (n=14,214 in September 2026 data set)
 combined %>%
   filter(
     (is.na(illspec)) &
@@ -46,8 +55,7 @@ combined %>%
     (is.na(cause_specific))) %>%
   count()
 
-#14214 have no cause specific information 
-
+#counting how many entries have non-NA cause specific information (n=35,468 in September 2026 data set)
 combined %>%
   filter(
     (!is.na(illspec)) |
@@ -60,8 +68,8 @@ combined %>%
     (!is.na(cause_specific))
   ) %>%
   count() 
-#35468 have at least a single cause specific 
 
+#counting how many entries have non-NA cause specific and/or cause_general information (n=45,433 in September 2026 data set)
 combined %>%
   filter(
     (!is.na(cause_general))|
@@ -75,15 +83,17 @@ combined %>%
     (!is.na(cause_specific))
   ) %>%
   count() 
-#45433 have at least one cause_general or cause_specific 
 
 
 ```
 
 
-fitting combined dataset into template 1 where cause = COD general and specific (concatenated) 
+#fitting data into template 
 ```{r fitting}
- template1 <- combined %>%
+#template has two columns, "case_number" and "cause"
+#template column "cause" concatenates both general and specific cause information from input data set
+
+template1 <- combined %>%
   transmute(
     CASE_NUMBER = case_number,
     CAUSE = paste(
@@ -102,11 +112,11 @@ fitting combined dataset into template 1 where cause = COD general and specific 
     )
   )
 
-#checking to make sure missingness pattern matches combined dataset 
+#checking to make sure missingness pattern matches combined data set 
 template1%>%filter(is.na(CAUSE))%>%count() #0
 template1%>%count(CAUSE, sort= TRUE)
 template1$CAUSE[template1$CAUSE == "NA: NA"]<-NA 
-template1%>%filter(is.na(CAUSE))%>%count() #4249
+template1%>%filter(!is.na(CAUSE))%>%count() #this value should match the number of entries have non-NA cause specific and/or cause_general information in your original dataset
 
 
 #cleaning template to shorten cause_general SUICIDE description 
@@ -119,7 +129,7 @@ template1$CAUSE <- sub(
   ignore.case = TRUE
 )
 
-#doing same for aids related illness
+#cleaning template to shorten cause_general AIDS-related illness description 
 template1$CAUSE <- sub(
   "^Illness.*?:",
   "Illness:",
@@ -128,7 +138,7 @@ template1$CAUSE <- sub(
 )
 
 
-
+#saving template into archived folder to be used in algorithm
 write_xlsx(template1, "code/cod_algorithm/z_archived/COD Coding Input template_1.xlsx")
 ```
 
