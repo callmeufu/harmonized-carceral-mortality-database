@@ -88,12 +88,16 @@ Key columns in the harmonized dataset include:
 | `sex`, `race` | Standardized decedent demographics |
 | `date_of_birth`, `age`, `age_from_dates` | Decedent age (reported and/or computed) |
 | `final_cause` | Algorithm-classified cause-of-death information based on `cause_general` and `cause_specific` columns|
-| `class_level_1` | General and specific cause-of-death information |
-| `class_level_2` | General and specific cause-of-death information |
-| `class_level_3` | General and specific cause-of-death information |
-| `keyword_matched` | General and specific cause-of-death information |
+| `class_level_1` | Broadest-level cause-of-death information |
+| `class_level_2` | Intermediate-level cause-of-death information |
+| `class_level_3a` | Specific cause-of-death information |
+| `class_level_3b` | Accompanying specific cause-of-death information in cases with multiple specific causes of death |
+| `matched_keywords` | Words that were used to classify class_level_3a and class_level_3b|
 | `cause_general`, `cause_specific` | General and specific cause-of-death information |
 | `illspec`, `drugspec`, `selfspec`, `accspec`, `suicspec`, `homispec`, `otherspec`, `place`, `evaluate`, `cause` | MCI codebook–defined cause-of-death detail fields |
+
+## Usage
+
 
 ## Known Limitations
 
