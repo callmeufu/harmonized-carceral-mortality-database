@@ -800,7 +800,7 @@ df["CLASS_LEVEL_3"] = df.apply(
 #export
 
 df.to_excel(
-    "code/cod_algorithm_extras/b_02_full_results_ICD.xlsx",
+    "code/cod_algorithm_extras/b_01_full_results_ICD.xlsx",
     index=False
 )
 ```
