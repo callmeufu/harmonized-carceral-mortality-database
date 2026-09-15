@@ -807,7 +807,7 @@ df.to_excel(
 
 
 ```{r lookingatoutput}
-output<-read_xlsx("code/cod_algorithm_extras/b_02_full_results_ICD.xlsx")
+output<-read_xlsx("code/cod_algorithm_extras/b_01_full_results_ICD.xlsx")
 
 output%>%filter(is.na(CAUSE))%>%count()
 output%>%filter(!is.na(CAUSE))%>%count()
