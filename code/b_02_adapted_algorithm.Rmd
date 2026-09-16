@@ -1197,10 +1197,8 @@ hcmd<-readRDS("data/hcmd.rds")
 
 ```
 
-# Pulling random sample
+# Pulling random sample 1
 ```{r randomtests}
-
-library(dplyr)
 
 # Load data
 df <- readRDS("data/hcmd.rds")
@@ -1262,12 +1260,137 @@ write.csv(
   row.names = FALSE
 )
 
-#
-# round2 <- draw_review_sample(df, state_col, "CASE_NUMBER", 50, seed = 2)
-# write.csv(round2, "review_round2_sample.csv", row.names = FALSE)
-#
-# round3 <- draw_review_sample(df, state_col, "CASE_NUMBER", 1000, seed = 3)
-# write.csv(round3, "review_round3_sample.csv", row.names = FALSE)
+```
+
+# Pulling round 2 sample
+```{r randomtests_round2}
+
+# Load data
+df <- readRDS("data/hcmd.rds")
+
+# Registry of previously sampled cases (now includes round1's ids)
+registry <- "code/cod_algorithm_extras/used_review_ids.csv"
+
+used_ids <- if (file.exists(registry)) {
+  read.csv(registry)$case_number
+} else {
+  character(0)
+}
+
+# Eligible records: nonblank cause + not previously sampled (round1 excluded)
+eligible <- df %>%
+  filter(
+    !is.na(cause),
+    trimws(cause) != "",
+    !case_number %in% used_ids
+  )
+
+# Number of states
+n_states <- n_distinct(eligible$state_abbrev)
+
+# Sample as evenly as possible across states
+set.seed(2)
+
+round2 <- eligible %>%
+  group_by(state_abbrev) %>%
+  group_modify(~ slice_sample(.x, n = min(floor(50 / n_states), nrow(.x)))) %>%
+  ungroup()
+
+# If fewer than 50 were sampled because some states had too few records,
+# randomly add additional eligible records
+if (nrow(round2) < 50) {
+
+  remaining <- eligible %>%
+    filter(!case_number %in% round2$case_number)
+
+  round2 <- bind_rows(
+    round2,
+    slice_sample(remaining, n = min(50 - nrow(round2), nrow(remaining)))
+  )
+}
+
+# Save sample
+write.csv(
+  round2,
+  "code/cod_algorithm_extras/review_round2_sample.csv",
+  row.names = FALSE
+)
+
+# Update registry (round1 + round2 ids)
+write.csv(
+  data.frame(
+    case_number = unique(c(used_ids, round2$case_number))
+  ),
+  registry,
+  row.names = FALSE
+)
 
 ```
 
+
+# Pulling round 3 (final) sample
+```{r randomtests_round3}
+
+library(dplyr)
+
+# Load data
+df <- readRDS("data/hcmd.rds")
+
+# Registry of previously sampled cases (now includes round1 + round2 ids)
+registry <- "code/cod_algorithm_extras/used_review_ids.csv"
+
+used_ids <- if (file.exists(registry)) {
+  read.csv(registry)$case_number
+} else {
+  character(0)
+}
+
+# Eligible records: nonblank cause + not previously sampled (round1+round2 excluded)
+eligible <- df %>%
+  filter(
+    !is.na(cause),
+    trimws(cause) != "",
+    !case_number %in% used_ids
+  )
+
+# Number of states
+n_states <- n_distinct(eligible$state_abbrev)
+
+# Sample as evenly as possible across states
+set.seed(3)
+
+round3 <- eligible %>%
+  group_by(state_abbrev) %>%
+  group_modify(~ slice_sample(.x, n = min(floor(1000 / n_states), nrow(.x)))) %>%
+  ungroup()
+
+# If fewer than 1000 were sampled because some states had too few records,
+# randomly add additional eligible records
+if (nrow(round3) < 1000) {
+
+  remaining <- eligible %>%
+    filter(!case_number %in% round3$case_number)
+
+  round3 <- bind_rows(
+    round3,
+    slice_sample(remaining, n = min(1000 - nrow(round3), nrow(remaining)))
+  )
+}
+
+# Save sample
+write.csv(
+  round3,
+  "code/cod_algorithm_extras/review_round3_sample.csv",
+  row.names = FALSE
+)
+
+# Update registry (round1 + round2 + round3 ids)
+write.csv(
+  data.frame(
+    case_number = unique(c(used_ids, round3$case_number))
+  ),
+  registry,
+  row.names = FALSE
+)
+
+```
