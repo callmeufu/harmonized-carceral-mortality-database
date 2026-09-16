@@ -221,22 +221,22 @@ unk_keywords = clean("UNDETERMINED")
 #flagging categories for binary output
 
 flags = [
-    "FINAL_OD",
-    "FINAL_COLD",
-    "FINAL_HEAT",
-    "FINAL_SUICIDE_CAUSE",
-    "FINAL_HOMICIDE_CAUSE",
-    "FINAL_CARDIO",
-    "FINAL_RESP",
-    "FINAL_CA",
-    "FINAL_NEURO",
-    "FINAL_COVID",
-    "FINAL_COMM_DISEASE",
-    "FINAL_NON_COMM_DISEASE",
-    "FINAL_ACCIDENTAL_CAUSE",
-    "FINAL_UNDETERMINED",
-    "FINAL_EXTERNAL",
-    "FINAL_INTERNAL"
+    "OVERDOSE",
+    "COLD",
+    "HEAT",
+    "SUICIDE",
+    "HOMICIDE",
+    "CARDIOVASCULAR",
+    "RESPIRATORY",
+    "CANCER",
+    "NEUROPSYCHIATRIC",
+    "COVID",
+    "COMM_DISEASE",
+    "NON_COMM_DISEASE",
+    "ACCIDENTAL",
+    "UNDETERMINED",
+    "EXTERNAL",
+    "INTERNAL"
 ]
 
 for f in flags:
@@ -245,22 +245,22 @@ for f in flags:
 
 #assigning cause groups 
 cause_groups = {
-    "FINAL_OD": od_keywords,
-    "FINAL_COLD": cold_keywords,
-    "FINAL_HEAT": heat_keywords,
-    "FINAL_SUICIDE_CAUSE": suicide_keywords,
-    "FINAL_HOMICIDE_CAUSE": homicide_keywords,
-    "FINAL_CARDIO": cardio_keywords,
-    "FINAL_RESP": resp_keywords,
-    "FINAL_CA": ca_keywords,
-    "FINAL_NEURO": neuro_keywords,
-    "FINAL_COVID": covid_keywords,
-    "FINAL_COMM_DISEASE": comm_keywords,
-    "FINAL_NON_COMM_DISEASE": non_comm_keywords,
-    "FINAL_ACCIDENTAL_CAUSE": acc_keywords,
-    "FINAL_EXTERNAL": external_keywords,
-    "FINAL_INTERNAL": internal_keywords,
-    "FINAL_UNDETERMINED": unk_keywords
+    "OVERDOSE": od_keywords,
+    "COLD": cold_keywords,
+    "HEAT": heat_keywords,
+    "SUICIDE": suicide_keywords,
+    "HOMICIDE": homicide_keywords,
+    "CARDIOVASCULAR": cardio_keywords,
+    "RESPIRATORY": resp_keywords,
+    "CANCER": ca_keywords,
+    "NEUROPSYCHIATRIC": neuro_keywords,
+    "COVID": covid_keywords,
+    "COMM_DISEASE": comm_keywords,
+    "NON_COMM_DISEASE": non_comm_keywords,
+    "ACCIDENTAL": acc_keywords,
+    "EXTERNAL": external_keywords,
+    "INTERNAL": internal_keywords,
+    "UNDETERMINED": unk_keywords
 }
 
 
@@ -269,38 +269,38 @@ cause_groups = {
 #level3 potential groups (most specific possible COD classifications)
 
 level3_groups = {
-    "FINAL_COLD": cold_keywords,
-    "FINAL_HEAT": heat_keywords,
-    "FINAL_OD": od_keywords,
-    "FINAL_ACCIDENTAL_CAUSE": acc_keywords,
-    "FINAL_SUICIDE_CAUSE": suicide_keywords,
-    "FINAL_HOMICIDE_CAUSE": homicide_keywords,
-    "FINAL_COVID": covid_keywords,
-    "FINAL_COMM_DISEASE": comm_keywords,
-    "FINAL_CA": ca_keywords,
-    "FINAL_CARDIO": cardio_keywords,
-    "FINAL_RESP": resp_keywords,
-    "FINAL_NEURO": neuro_keywords,
-    "FINAL_NON_COMM_DISEASE": non_comm_keywords
+    "COLD": cold_keywords,
+    "HEAT": heat_keywords,
+    "OVERDOSE": od_keywords,
+    "ACCIDENTAL": acc_keywords,
+    "SUICIDE": suicide_keywords,
+    "HOMICIDE": homicide_keywords,
+    "COVID": covid_keywords,
+    "COMM_DISEASE": comm_keywords,
+    "CANCER": ca_keywords,
+    "CARDIOVASCULAR": cardio_keywords,
+    "RESPIRATORY": resp_keywords,
+    "NEUROPSYCHIATRIC": neuro_keywords,
+    "NON_COMM_DISEASE": non_comm_keywords
 }
 
 
 #level3 labels 
 
 class3_labels = {
-    "FINAL_COLD": "Cold-related death",
-    "FINAL_HEAT": "Heat-related death",
-    "FINAL_OD": "Overdose",
-    "FINAL_ACCIDENTAL_CAUSE": "Other Accidental",
-    "FINAL_SUICIDE_CAUSE": "Suicide",
-    "FINAL_HOMICIDE_CAUSE": "Homicide",
-    "FINAL_COVID": "COVID-19",
-    "FINAL_COMM_DISEASE": "Other Communicable Disease",
-    "FINAL_CA": "Cancer",
-    "FINAL_CARDIO": "Cardiovascular Disease",
-    "FINAL_RESP": "Respiratory Disease",
-    "FINAL_NEURO": "Neuropsychiatric Conditions",
-    "FINAL_NON_COMM_DISEASE": "Other Non-Communicable Disease"
+    "COLD": "Cold-related death",
+    "HEAT": "Heat-related death",
+    "OVERDOSE": "Overdose",
+    "ACCIDENTAL": "Other Accidental",
+    "SUICIDE": "Suicide",
+    "HOMICIDE": "Homicide",
+    "COVID": "COVID-19",
+    "COMM_DISEASE": "Other Communicable Disease",
+    "CANCER": "Cancer",
+    "CARDIOVASCULAR": "Cardiovascular Disease",
+    "RESPIRATORY": "Respiratory Disease",
+    "NEUROPSYCHIATRIC": "Neuropsychiatric Conditions",
+    "NON_COMM_DISEASE": "Other Non-Communicable Disease"
 }
 
 
@@ -347,8 +347,8 @@ for flag, kws in cause_groups.items():
 
     for idx, text in df.loc[
         mask,
-        "CAUSE_FOR_CLASS"
-    ].items():
+        "CAUSE"
+    ].items():is 
 
         best_kw = None
         best_score = 0
@@ -548,71 +548,71 @@ for idx, text in df["CAUSE"].items():
 
 # building tiered categories
 
-df["FINAL_NON_COMM_DISEASE"] = (
-    df["FINAL_NON_COMM_DISEASE"] |
-    df["FINAL_CARDIO"] |
-    df["FINAL_RESP"] |
-    df["FINAL_CA"] |
-    df["FINAL_NEURO"]
+df["NON_COMM_DISEASE"] = (
+    df["FNON_COMM_DISEASE"] |
+    df["CARDIOVASCULAR"] |
+    df["RESPIRATORY"] |
+    df["CANCER"] |
+    df["NEUROPSYCHIATRIC"]
 )
 
 
-df["FINAL_COMM_DISEASE"] = (
-    df["FINAL_COMM_DISEASE"] |
-    df["FINAL_COVID"]
+df["COMM_DISEASE"] = (
+    df["COMM_DISEASE"] |
+    df["COVID"]
 )
 
 
-df["FINAL_CAUSE_ACCIDENTAL"] = (
-    df["FINAL_ACCIDENTAL_CAUSE"] |
-    df["FINAL_OD"] |
-    df["FINAL_COLD"] |
-    df["FINAL_HEAT"]
+df["ACCIDENTAL"] = (
+    df["ACCIDENTAL"] |
+    df["OVERDOSE"] |
+    df["COLD"] |
+    df["HEAT"]
 )
 
 
-df["FINAL_CAUSE_INTENTIONAL"] = (
-    df["FINAL_SUICIDE_CAUSE"] |
-    df["FINAL_HOMICIDE_CAUSE"]
+df["INTENTIONAL"] = (
+    df["SUICIDE"] |
+    df["HOMICIDE"]
 )
 
 
-df["FINAL_EXTERNAL"] = (
-    df["FINAL_EXTERNAL"] |
-    df["FINAL_CAUSE_ACCIDENTAL"] |
-    df["FINAL_CAUSE_INTENTIONAL"]
+df["EXTERNAL"] = (
+    df["EXTERNAL"] |
+    df["ACCIDENTAL"] |
+    df["INTENTIONAL"]
 )
 
 
-df["FINAL_INTERNAL"] = (
-    df["FINAL_INTERNAL"] |
-    df["FINAL_COMM_DISEASE"] |
-    df["FINAL_NON_COMM_DISEASE"]
+df["INTERNAL"] = (
+    df["INTERNAL"] |
+    df["COMM_DISEASE"] |
+    df["NON_COMM_DISEASE"]
 )
 
 
 # building undetermined category 
 
 specific_cause_cols = [
-    "FINAL_COMM_DISEASE",
-    "FINAL_NON_COMM_DISEASE",
-    "FINAL_EXTERNAL",
-    "FINAL_ACCIDENTAL_CAUSE",
-    "FINAL_SUICIDE_CAUSE",
-    "FINAL_HOMICIDE_CAUSE",
-    "FINAL_OD",
-    "FINAL_COLD",
-    "FINAL_HEAT",
-    "FINAL_CARDIO",
-    "FINAL_RESP",
-    "FINAL_CA",
-    "FINAL_NEURO",
-    "FINAL_COVID"
+    "COMM_DISEASE",
+    "NON_COMM_DISEASE",
+    "EXTERNAL",
+    "ACCIDENTAL",
+    "SUICIDE",
+    "HOMICIDE",
+    "OVERDOSE",
+    "COLD",
+    "HEAT",
+    "CARDIOVASCULAR",
+    "RESPIRATORY",
+    "CANCER",
+    "NEUROPSYCHIATRIC",
+    "COVID"
 ]
 
 
-df["FINAL_UNDETERMINED"] = (
-    df["FINAL_UNDETERMINED"] |
+df["UNDETERMINED"] = (
+    df["UNDETERMINED"] |
     ~df[specific_cause_cols]
         .fillna(False)
         .any(axis=1)
@@ -620,77 +620,16 @@ df["FINAL_UNDETERMINED"] = (
 
 
 
-# building final cause 
-
-def get_final_cause(row):
-
-    if row["FINAL_OD"]:
-        return "OVERDOSE"
-
-    if row["FINAL_COLD"]:
-        return "COLD"
-
-    if row["FINAL_HEAT"]:
-        return "HEAT"
-
-    if row["FINAL_SUICIDE_CAUSE"]:
-        return "SUICIDE"
-
-    if row["FINAL_HOMICIDE_CAUSE"]:
-        return "HOMICIDE"
-
-    if row["FINAL_CARDIO"]:
-        return "CARDIOVASCULAR DISEASE"
-
-    if row["FINAL_RESP"]:
-        return "RESPIRATORY DISEASE"
-
-    if row["FINAL_CA"]:
-        return "CANCER"
-
-    if row["FINAL_NEURO"]:
-        return "NEUROPSYCHIATRIC ILLNESS"
-
-    if row["FINAL_COVID"]:
-        return "COVID-19"
-
-    if row["FINAL_COMM_DISEASE"]:
-        return "COMMUNICABLE DISEASE"
-
-    if row["FINAL_NON_COMM_DISEASE"]:
-        return "NON-COMMUNICABLE DISEASE"
-
-    if row["FINAL_CAUSE_ACCIDENTAL"]:
-        return "ACCIDENTAL"
-
-    if row["FINAL_EXTERNAL"]:
-        return "EXTERNAL"
-
-    if row["FINAL_INTERNAL"]:
-        return "INTERNAL"
-
-    if row["FINAL_UNDETERMINED"]:
-        return "UNDETERMINED"
-
-    return "UNDETERMINED"
-
-
-df["FINAL_CAUSE"] = df.apply(
-    get_final_cause,
-    axis=1
-)
-
-
 # building level1
 def get_level1(row):
 
-    if row["FINAL_EXTERNAL"]:
+    if row["EXTERNAL"]:
         return "External/Injury (Unnatural Death)"
 
-    if row["FINAL_INTERNAL"]:
+    if row["INTERNAL"]:
         return "Internal (Natural Death)"
 
-    if row["FINAL_UNDETERMINED"]:
+    if row["UNDETERMINED"]:
         return "Undetermined"
 
     return "Undetermined"
@@ -700,19 +639,19 @@ def get_level1(row):
 
 def get_level2(row):
 
-    if row["FINAL_CAUSE_ACCIDENTAL"]:
+    if row["ACCIDENTAL"]:
         return "Accidental"
 
-    if row["FINAL_CAUSE_INTENTIONAL"]:
+    if row["INTENTIONAL"]:
         return "Intentional"
 
-    if row["FINAL_COMM_DISEASE"]:
+    if row["COMM_DISEASE"]:
         return "Communicable Disease"
 
-    if row["FINAL_NON_COMM_DISEASE"]:
+    if row["NON_COMM_DISEASE"]:
         return "Non-Communicable Disease"
 
-    if row["FINAL_UNDETERMINED"]:
+    if row["UNDETERMINED"]:
         return "Undetermined"
 
     return "Undetermined"
@@ -724,58 +663,58 @@ def get_level3(row):
 
     # accidental
 
-    if row["FINAL_COLD"]:
+    if row["COLD"]:
         return "Cold-related death"
 
-    if row["FINAL_HEAT"]:
+    if row["HEAT"]:
         return "Heat-related death"
 
-    if row["FINAL_OD"]:
+    if row["OVERDOSE"]:
         return "Overdose"
 
-    if row["FINAL_ACCIDENTAL_CAUSE"]:
+    if row["ACCIDENTAL"]:
         return "Other Accidental"
 
 
     # intentional
 
-    if row["FINAL_SUICIDE_CAUSE"]:
+    if row["SUICIDE"]:
         return "Suicide"
 
-    if row["FINAL_HOMICIDE_CAUSE"]:
+    if row["HOMICIDE"]:
         return "Homicide"
 
 
     # communicable
 
-    if row["FINAL_COVID"]:
+    if row["COVID"]:
         return "COVID-19"
 
-    if row["FINAL_COMM_DISEASE"]:
+    if row["COMM_DISEASE"]:
         return "Other Communicable Disease"
 
 
     # non-communicable
 
-    if row["FINAL_CA"]:
+    if row["CANCER"]:
         return "Cancer"
 
-    if row["FINAL_CARDIO"]:
+    if row["CARDIOVASCULAR"]:
         return "Cardiovascular Disease"
 
-    if row["FINAL_RESP"]:
+    if row["RESPIRATORY"]:
         return "Respiratory Disease"
 
-    if row["FINAL_NEURO"]:
+    if row["NEUROPSYCHIATRIC"]:
         return "Neuropsychiatric Conditions"
 
-    if row["FINAL_NON_COMM_DISEASE"]:
+    if row["NON_COMM_DISEASE"]:
         return "Other Non-Communicable Disease"
 
 
     # undetermined
 
-    if row["FINAL_UNDETERMINED"]:
+    if row["UNDETERMINED"]:
         return "Undetermined"
 
     return "Undetermined"
@@ -791,11 +730,6 @@ df["CLASS_LEVEL_2"] = df.apply(
     axis=1
 )
 
-df["CLASS_LEVEL_3"] = df.apply(
-    get_level3,
-    axis=1
-)
-
 
 #export
 
@@ -805,6 +739,404 @@ df.to_excel(
 )
 ```
 
+#testing with multiple level 2
+```{python levels}
+import pandas as pd
+import numpy as np
+from rapidfuzz import fuzz
+import re
+
+
+# ---------------------------------------------------------------------------
+# CONFIG
+# ---------------------------------------------------------------------------
+
+excel_file_name = "code/cod_algorithm_extras/z_archived/COD Coding Input template_1.xlsx"
+sub_sheet = "Sheet1"
+
+keywords_excel = "code/b_00_final_kw_v1.xlsx"
+kw_sub_sheet = "kw_icd_categories"
+
+FUZZY_THRESHOLD = 85
+
+
+# ---------------------------------------------------------------------------
+# LOAD DATA
+# ---------------------------------------------------------------------------
+
+df = pd.read_excel(
+    excel_file_name,
+    sheet_name=sub_sheet,
+    engine="openpyxl"
+)
+
+df["CAUSE"] = (
+    df["CAUSE"]
+    .fillna("")
+    .astype(str)
+    .str.strip()
+    .str.upper()
+)
+
+
+# ---------------------------------------------------------------------------
+# LOAD KEYWORDS
+# ---------------------------------------------------------------------------
+
+kw_df = pd.read_excel(
+    keywords_excel,
+    sheet_name=kw_sub_sheet,
+    engine="openpyxl"
+)
+
+
+def clean(col):
+    return (
+        kw_df[col]
+        .dropna()
+        .astype(str)
+        .str.upper()
+        .str.strip()
+        .tolist()
+    )
+
+
+od_keywords = clean("OVERDOSE KEYWORDS")
+cold_keywords = clean("COLD KEYWORDS")
+heat_keywords = clean("HEAT KEYWORDS")
+suicide_keywords = clean("SUICIDE KEYWORDS")
+homicide_keywords = clean("HOMICIDE KEYWORDS")
+cardio_keywords = clean("CARDIOVASCULAR KEYWORDS")
+resp_keywords = clean("RESPIRATORY KEYWORDS")
+ca_keywords = clean("CANCERS KEYWORDS")
+neuro_keywords = clean("NEUROPSYCHIATRIC KEYWORDS")
+covid_keywords = clean("COVID-19 KEYWORDS")
+comm_keywords = clean("COMMUNICABLE DISEASE KEYWORDS")
+non_comm_keywords = clean("NONCOMMUNICABLE DISEASE KEYWORDS")
+acc_keywords = clean("ACCIDENTAL KEYWORDS")
+
+# NOTE: external_keywords / internal_keywords / unk_keywords are no longer
+# used for matching. Previously they fed a separate EXTERNAL/INTERNAL/
+# UNDETERMINED keyword pass that could disagree with the Level 1 value
+# derived from the Level 2/3 hierarchy. Level 1 is now derived entirely
+# from the hierarchy below, so there is a single source of truth. If you
+# still want a broad EXTERNAL/INTERNAL keyword pass as an independent
+# sanity check (not feeding into CLASS_LEVEL_1), let me know and we can
+# add it back as a separate diagnostic column.
+
+
+# ---------------------------------------------------------------------------
+# HIERARCHY DEFINITIONS
+# ---------------------------------------------------------------------------
+
+# level3 flag -> list of keywords used to detect that flag
+level3_groups = {
+    "COLD": cold_keywords,
+    "HEAT": heat_keywords,
+    "OVERDOSE": od_keywords,
+    "ACCIDENTAL": acc_keywords,
+    "SUICIDE": suicide_keywords,
+    "HOMICIDE": homicide_keywords,
+    "COVID": covid_keywords,
+    "COMM_DISEASE": comm_keywords,
+    "CANCER": ca_keywords,
+    "CARDIOVASCULAR": cardio_keywords,
+    "RESPIRATORY": resp_keywords,
+    "NEUROPSYCHIATRIC": neuro_keywords,
+    "NON_COMM_DISEASE": non_comm_keywords
+}
+
+# level3 flag -> readable label
+class3_labels = {
+    "COLD": "Cold-related death",
+    "HEAT": "Heat-related death",
+    "OVERDOSE": "Overdose",
+    "ACCIDENTAL": "Other Accidental",
+    "SUICIDE": "Suicide",
+    "HOMICIDE": "Homicide",
+    "COVID": "COVID-19",
+    "COMM_DISEASE": "Other Communicable Disease",
+    "CANCER": "Cancer",
+    "CARDIOVASCULAR": "Cardiovascular Disease",
+    "RESPIRATORY": "Respiratory Disease",
+    "NEUROPSYCHIATRIC": "Neuropsychiatric Conditions",
+    "NON_COMM_DISEASE": "Other Non-Communicable Disease"
+}
+
+# level3 flag -> level2 parent label
+level2_parent = {
+    "COLD": "Accidental",
+    "HEAT": "Accidental",
+    "OVERDOSE": "Accidental",
+    "ACCIDENTAL": "Accidental",
+    "SUICIDE": "Intentional",
+    "HOMICIDE": "Intentional",
+    "COVID": "Communicable Disease",
+    "COMM_DISEASE": "Communicable Disease",
+    "CANCER": "Non-Communicable Disease",
+    "CARDIOVASCULAR": "Non-Communicable Disease",
+    "RESPIRATORY": "Non-Communicable Disease",
+    "NEUROPSYCHIATRIC": "Non-Communicable Disease",
+    "NON_COMM_DISEASE": "Non-Communicable Disease",
+}
+
+# level2 label -> level1 parent label
+level1_parent = {
+    "Accidental": "External/Injury (Unnatural Death)",
+    "Intentional": "External/Injury (Unnatural Death)",
+    "Communicable Disease": "Internal (Natural Death)",
+    "Non-Communicable Disease": "Internal (Natural Death)",
+}
+
+
+# ---------------------------------------------------------------------------
+# INITIALIZE OUTPUT COLUMNS
+# ---------------------------------------------------------------------------
+
+df["MATCH_COUNT"] = 0
+df["MATCHED_KEYWORDS"] = ""
+df["MATCHED_KEYWORD"] = ""
+df["MATCH_SCORE"] = np.nan
+df["MATCH_TYPE"] = ""
+
+# level3/level2 grouped into up to two slots (A, B) based on shared level2 parent 
+# level3 match.
+df["CLASS_LEVEL_3_A"] = ""
+df["CLASS_LEVEL_2_A"] = ""
+df["CLASS_LEVEL_3_B"] = ""
+df["CLASS_LEVEL_2_B"] = ""
+df["LEVEL2_GROUP_COUNT"] = 0
+df["LEVEL2_OVERFLOW"] = ""
+
+#class level 1 remains as a single option 
+
+df["CLASS_LEVEL_1"] = ""
+
+
+# ---------------------------------------------------------------------------
+# MAIN MATCHING LOOP
+# ---------------------------------------------------------------------------
+
+for idx, text in df["CAUSE"].items():
+
+    if text == "":
+        continue
+
+    level3_matches = []
+
+    for flag, kws in level3_groups.items():
+
+        exact_matches_for_group = []
+
+        # exact matches
+        for kw in kws:
+            match = re.search(
+                rf"\b{re.escape(kw)}\b",
+                text
+            )
+            if match:
+                exact_matches_for_group.append({
+                    "keyword": kw,
+                    "flag": flag,
+                    "score": 100,
+                    "type": "Exact",
+                    "position": match.start()
+                })
+
+        level3_matches.extend(exact_matches_for_group)
+
+        # fuzzy fallback, only if no exact match for this flag
+        if len(exact_matches_for_group) == 0:
+
+            best_kw = None
+            best_score = 0
+
+            for kw in kws:
+                score = fuzz.token_set_ratio(text, kw)
+                if score > best_score:
+                    best_score = score
+                    best_kw = kw
+
+            if best_score >= FUZZY_THRESHOLD:
+                level3_matches.append({
+                    "keyword": best_kw,
+                    "flag": flag,
+                    "score": best_score,
+                    "type": "Fuzzy",
+                    "position": float("inf")
+                })
+
+    # remove duplicate keywords, keeping the earliest position seen
+    unique_matches = {}
+    for match in level3_matches:
+        keyword = match["keyword"]
+        if keyword not in unique_matches:
+            unique_matches[keyword] = match
+        elif match["position"] < unique_matches[keyword]["position"]:
+            unique_matches[keyword] = match
+
+    # sort by where each match first appears in the text
+    level3_matches = sorted(
+        unique_matches.values(),
+        key=lambda x: x["position"]
+    )
+
+    if len(level3_matches) == 0:
+        continue
+
+    # match diagnostics
+    df.loc[idx, "MATCH_COUNT"] = len(level3_matches)
+    df.loc[idx, "MATCHED_KEYWORDS"] = " | ".join(
+        match["keyword"] for match in level3_matches
+    )
+
+    primary = level3_matches[0]
+    df.loc[idx, "MATCHED_KEYWORD"] = primary["keyword"]
+    df.loc[idx, "MATCH_SCORE"] = primary["score"]
+    df.loc[idx, "MATCH_TYPE"] = primary["type"]
+
+    # ------------------------------------------------------------------
+    # group level3 matches by their level2 parent, preserving order of
+    # first appearance of each parent group in the text
+    # ------------------------------------------------------------------
+
+    groups = {}       # level2 parent -> ordered, deduped list of level3 labels
+    group_order = []  # order in which parents first appear
+
+    for match in level3_matches:
+        label3 = class3_labels[match["flag"]]
+        parent2 = level2_parent[match["flag"]]
+
+        if parent2 not in groups:
+            groups[parent2] = []
+            group_order.append(parent2)
+
+        if label3 not in groups[parent2]:
+            groups[parent2].append(label3)
+
+    df.loc[idx, "LEVEL2_GROUP_COUNT"] = len(group_order)
+
+    if len(group_order) >= 1:
+        parent_a = group_order[0]
+        df.loc[idx, "CLASS_LEVEL_2_A"] = parent_a
+        df.loc[idx, "CLASS_LEVEL_3_A"] = " | ".join(groups[parent_a])
+
+    if len(group_order) >= 2:
+        parent_b = group_order[1]
+        df.loc[idx, "CLASS_LEVEL_2_B"] = parent_b
+        df.loc[idx, "CLASS_LEVEL_3_B"] = " | ".join(groups[parent_b])
+
+    if len(group_order) >= 3:
+        overflow_parents = group_order[2:]
+        overflow_labels = [
+            f"{p}: {' | '.join(groups[p])}" for p in overflow_parents
+        ]
+        df.loc[idx, "LEVEL2_OVERFLOW"] = " ; ".join(overflow_labels)
+
+    # ------------------------------------------------------------------
+    # level1: independent dedup across whichever level2 groups appear
+    # ------------------------------------------------------------------
+
+    level1_labels = []
+    for parent2 in group_order:
+        parent1 = level1_parent[parent2]
+        if parent1 not in level1_labels:
+            level1_labels.append(parent1)
+
+    df.loc[idx, "CLASS_LEVEL_1"] = " | ".join(level1_labels)
+
+
+# ---------------------------------------------------------------------------
+# HANDLE RECORDS WITH NO LEVEL3 MATCH AT ALL
+# ---------------------------------------------------------------------------
+
+no_match_mask = df["CLASS_LEVEL_3_A"] == ""
+
+df.loc[no_match_mask, "CLASS_LEVEL_3_A"] = "Undetermined"
+df.loc[no_match_mask, "CLASS_LEVEL_2_A"] = "Undetermined"
+df.loc[no_match_mask, "CLASS_LEVEL_1"] = "Undetermined"
+
+
+# ---------------------------------------------------------------------------
+# DERIVE BOOLEAN FLAGS FROM THE CLASS COLUMNS (single source of truth --
+# these are no longer computed by a separate keyword pass, so they can't
+# drift out of sync with CLASS_LEVEL_1/2/3)
+# ---------------------------------------------------------------------------
+
+level3_combined = (
+    df["CLASS_LEVEL_3_A"].fillna("") + " | " + df["CLASS_LEVEL_3_B"].fillna("")
+)
+level2_combined = (
+    df["CLASS_LEVEL_2_A"].fillna("") + " | " + df["CLASS_LEVEL_2_B"].fillna("")
+)
+
+
+def _contains_label(combined_col, label):
+    return combined_col.apply(
+        lambda x: label in [s.strip() for s in x.split("|")]
+    )
+
+
+level3_flags = [
+    "COLD", "HEAT", "OVERDOSE", "SUICIDE", "HOMICIDE", "CARDIOVASCULAR",
+    "RESPIRATORY", "CANCER", "NEUROPSYCHIATRIC", "COVID", "COMM_DISEASE",
+    "NON_COMM_DISEASE", "ACCIDENTAL"
+]
+
+for flag in level3_flags:
+    df[flag] = _contains_label(level3_combined, class3_labels[flag])
+
+level2_flag_map = {
+    "Accidental": "ACCIDENTAL",
+    "Intentional": "INTENTIONAL",
+    "Communicable Disease": "COMM_DISEASE",
+    "Non-Communicable Disease": "NON_COMM_DISEASE",
+}
+
+for label, flag in level2_flag_map.items():
+    df[flag] = _contains_label(level2_combined, label)
+
+df["EXTERNAL"] = df["CLASS_LEVEL_1"].str.contains(
+    "External/Injury (Unnatural Death)", regex=False
+)
+df["INTERNAL"] = df["CLASS_LEVEL_1"].str.contains(
+    "Internal (Natural Death)", regex=False
+)
+df["UNDETERMINED"] = df["CLASS_LEVEL_1"] == "Undetermined"
+
+
+# ---------------------------------------------------------------------------
+# FINAL COLUMN ORDER
+# ---------------------------------------------------------------------------
+
+final_column_order = [
+    "CASE_NUMBER", "CAUSE",
+    "MATCH_COUNT", "MATCHED_KEYWORDS", "MATCHED_KEYWORD", "MATCH_SCORE", "MATCH_TYPE",
+    "EXTERNAL", "INTERNAL", "UNDETERMINED",
+    "ACCIDENTAL", "INTENTIONAL", "COMM_DISEASE", "NON_COMM_DISEASE",
+    "COLD", "HEAT", "OVERDOSE", "SUICIDE", "HOMICIDE", "COVID",
+    "CARDIOVASCULAR", "RESPIRATORY", "CANCER", "NEUROPSYCHIATRIC",
+    "LEVEL2_GROUP_COUNT", "LEVEL2_OVERFLOW",
+    "CLASS_LEVEL_1",
+    "CLASS_LEVEL_2_A", "CLASS_LEVEL_3_A",
+    "CLASS_LEVEL_2_B", "CLASS_LEVEL_3_B",
+]
+
+remaining = [c for c in df.columns if c not in final_column_order]
+df = df[final_column_order + remaining]
+
+
+# ---------------------------------------------------------------------------
+# EXPORT
+# ---------------------------------------------------------------------------
+
+df.to_excel(
+    "code/cod_algorithm_extras/b_01_full_results_ICD.xlsx",
+    index=False
+)
+
+
+```
 
 ```{r lookingatoutput}
 output<-read_xlsx("code/cod_algorithm_extras/b_01_full_results_ICD.xlsx")
@@ -839,17 +1171,19 @@ outputlittlenas<-output_little%>%filter(is.na(CLASS_LEVEL_2))%>%filter(is.na(CLA
 output$case_number<-output$CASE_NUMBER
 output$final_cause<-output$FINAL_CAUSE
 output$class_level_1<-output$CLASS_LEVEL_1
-output$class_level_2<-output$CLASS_LEVEL_2
+output$class_level_2a<-output$CLASS_LEVEL_2_A
+output$class_level_2b<-output$CLASS_LEVEL_2_B
 output$class_level_3a<-output$CLASS_LEVEL_3_A
 output$class_level_3b<-output$CLASS_LEVEL_3_B
 output$matched_keywords<-output$MATCHED_KEYWORDS
+output$cause<-output$CAUSE
 
 
 
 hcmd <- combined %>%
   left_join(
     output %>%
-      select(case_number, matched_keywords, class_level_1, class_level_2, class_level_3a, class_level_3b),
+      select(case_number, cause, matched_keywords, class_level_1, class_level_2a, class_level_2b, class_level_3a, class_level_3b),
     by = "case_number"
   )
 
@@ -861,6 +1195,79 @@ saveRDS(hcmd, "data/hcmd.rds")
 ```{r reading hcmd}
 hcmd<-readRDS("data/hcmd.rds")
 
+```
+
+# Pulling random sample
+```{r randomtests}
+
+library(dplyr)
+
+# Load data
+df <- readRDS("data/hcmd.rds")
+
+# Registry of previously sampled cases
+registry <- "code/cod_algorithm_extras/used_review_ids.csv"
+
+used_ids <- if (file.exists(registry)) {
+  read.csv(registry)$case_number
+} else {
+  character(0)
+}
+
+# Eligible records: nonblank cause + not previously sampled
+eligible <- df %>%
+  filter(
+    !is.na(cause),
+    trimws(cause) != "",
+    !case_number %in% used_ids
+  )
+
+# Number of states
+n_states <- n_distinct(eligible$state_abbrev)
+
+# Sample as evenly as possible across states
+set.seed(1)
+
+round1 <- eligible %>%
+  group_by(state_abbrev) %>%
+  group_modify(~ slice_sample(.x, n = min(floor(50 / n_states), nrow(.x)))) %>%
+  ungroup()
+
+# If fewer than 50 were sampled because some states had too few records,
+# randomly add additional eligible records
+if (nrow(round1) < 50) {
+  
+  remaining <- eligible %>%
+    filter(!case_number %in% round1$case_number)
+  
+  round1 <- bind_rows(
+    round1,
+    slice_sample(remaining, n = min(50 - nrow(round1), nrow(remaining)))
+  )
+}
+
+# Save sample
+write.csv(
+  round1,
+  "code/cod_algorithm_extras/review_round1_sample.csv",
+  row.names = FALSE
+)
+
+# Update registry
+write.csv(
+  data.frame(
+    case_number = unique(c(used_ids, round1$case_number))
+  ),
+  registry,
+  row.names = FALSE
+)
+
+#
+# round2 <- draw_review_sample(df, state_col, "CASE_NUMBER", 50, seed = 2)
+# write.csv(round2, "review_round2_sample.csv", row.names = FALSE)
+#
+# round3 <- draw_review_sample(df, state_col, "CASE_NUMBER", 1000, seed = 3)
+# write.csv(round3, "review_round3_sample.csv", row.names = FALSE)
 
 ```
 
