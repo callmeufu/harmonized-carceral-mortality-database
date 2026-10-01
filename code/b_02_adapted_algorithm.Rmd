@@ -1330,11 +1330,13 @@ write.csv(
 
 # Pulling round 3 (final) sample
 ```{r randomtests_round3}
+
 library(dplyr)
+
 # Load data
 df <- readRDS("data/hcmd.rds")
 
-# Registry of previously sampled cases (now includes round1 + round2 ids)
+# Registry of previously sampled cases
 registry <- "code/cod_algorithm_extras/used_review_ids.csv"
 
 used_ids <- if (file.exists(registry)) {
@@ -1343,7 +1345,9 @@ used_ids <- if (file.exists(registry)) {
   character(0)
 }
 
-# Eligible records: nonblank cause + not previously sampled (round1+round2 excluded)
+# Eligible records:
+# - nonblank cause
+# - not previously sampled in rounds 1 or 2
 eligible <- df %>%
   filter(
     !is.na(cause),
@@ -1351,29 +1355,51 @@ eligible <- df %>%
     !case_number %in% used_ids
   )
 
-# Number of states
-n_states <- n_distinct(eligible$state_abbrev)
+# Total final sample size
+sample_size <- 1000
 
-# Sample as evenly as possible across states
+# Calculate the number of eligible records in each state
+state_counts <- eligible %>%
+  count(state_abbrev, name = "state_n") %>%
+  mutate(
+    state_proportion = state_n / sum(state_n),
+    exact_n = state_proportion * sample_size,
+    sample_n = floor(exact_n),
+    remainder = exact_n - sample_n
+  )
+
+# Distribute remaining sample slots to states with the largest remainders
+remaining_slots <- sample_size - sum(state_counts$sample_n)
+
+if (remaining_slots > 0) {
+  state_counts <- state_counts %>%
+    arrange(desc(remainder)) %>%
+    mutate(
+      sample_n = sample_n + if_else(row_number() <= remaining_slots, 1L, 0L)
+    ) %>%
+    arrange(state_abbrev)
+}
+
+# Check that the state allocations sum to exactly 1,000
+stopifnot(sum(state_counts$sample_n) == sample_size)
+
+# Set seed for reproducibility
 set.seed(3)
 
+# Draw the proportional sample within each state
 round3 <- eligible %>%
+  inner_join(
+    state_counts %>% select(state_abbrev, sample_n),
+    by = "state_abbrev"
+  ) %>%
   group_by(state_abbrev) %>%
-  group_modify(~ slice_sample(.x, n = min(floor(1000 / n_states), nrow(.x)))) %>%
-  ungroup()
+  group_modify(~ slice_sample(.x, n = unique(.x$sample_n))) %>%
+  ungroup() %>%
+  select(-sample_n)
 
-# If fewer than 1000 were sampled because some states had too few records,
-# randomly add additional eligible records
-if (nrow(round3) < 1000) {
-
-  remaining <- eligible %>%
-    filter(!case_number %in% round3$case_number)
-
-  round3 <- bind_rows(
-    round3,
-    slice_sample(remaining, n = min(1000 - nrow(round3), nrow(remaining)))
-  )
-}
+# Final checks
+stopifnot(nrow(round3) == sample_size)
+stopifnot(!any(round3$case_number %in% used_ids))
 
 # Save sample
 write.csv(
@@ -1382,7 +1408,7 @@ write.csv(
   row.names = FALSE
 )
 
-# Update registry (round1 + round2 + round3 ids)
+# Update registry
 write.csv(
   data.frame(
     case_number = unique(c(used_ids, round3$case_number))
@@ -1390,5 +1416,28 @@ write.csv(
   registry,
   row.names = FALSE
 )
+```
 
+
+# Compare eligible dataset proportions to final sample proportions
+
+```{r checking}
+state_check <- eligible %>%
+  count(state_abbrev, name = "eligible_n") %>%
+  mutate(
+    eligible_prop = eligible_n / sum(eligible_n)
+  ) %>%
+  left_join(
+    round3 %>%
+      count(state_abbrev, name = "sample_n") %>%
+      mutate(
+        sample_prop = sample_n / sum(sample_n)
+      ),
+    by = "state_abbrev"
+  ) %>%
+  mutate(
+    difference = sample_prop - eligible_prop
+  )
+
+state_check
 ```
