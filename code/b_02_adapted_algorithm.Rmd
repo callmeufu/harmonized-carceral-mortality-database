@@ -215,7 +215,9 @@ acc_keywords = clean("ACCIDENTAL KEYWORDS")
 external_keywords = clean("INJURY KEYWORDS")
 internal_keywords = clean("INTERNAL KEYWORDS")
 unk_keywords = clean("UNDETERMINED")
-
+dig_keywords = clean("DIGESTIVE KEYWORDS")
+gen_keywords = clean("GENITOUTINARY KEYWORDS")
+meta_keywords = clean("ENDROCRINE, NUTRITIONAL, AND METABOLIC DISEASE  KEYWORDS")
 
 
 #flagging categories for binary output
@@ -237,6 +239,9 @@ flags = [
     "UNDETERMINED",
     "EXTERNAL",
     "INTERNAL"
+    "DIGESTIVE",
+    "GENITOUTINARY",
+    "ENDOCRINE, NUTRITIONAL, AND METABOLIC DISEASE"
 ]
 
 for f in flags:
@@ -260,7 +265,10 @@ cause_groups = {
     "ACCIDENTAL": acc_keywords,
     "EXTERNAL": external_keywords,
     "INTERNAL": internal_keywords,
-    "UNDETERMINED": unk_keywords
+    "UNDETERMINED": unk_keywords,
+    "DIGESTIVE": dig_keywords,
+    "GENITOUTINARY": gen_keywords,
+    "ENDROCRINE, NUTRITIONAL, AND METABOLIC DISEASE  KEYWORDS": meta_keywords
 }
 
 
@@ -281,7 +289,10 @@ level3_groups = {
     "CARDIOVASCULAR": cardio_keywords,
     "RESPIRATORY": resp_keywords,
     "NEUROPSYCHIATRIC": neuro_keywords,
-    "NON_COMM_DISEASE": non_comm_keywords
+    "NON_COMM_DISEASE": non_comm_keywords,
+    "DIGESTIVE": dig_keywords,
+    "GENITOUTINARY": gen_keywords,
+    "ENDROCRINE, NUTRITIONAL, AND METABOLIC DISEASE": meta_keywords
 }
 
 
@@ -301,6 +312,9 @@ class3_labels = {
     "RESPIRATORY": "Respiratory Disease",
     "NEUROPSYCHIATRIC": "Neuropsychiatric Conditions",
     "NON_COMM_DISEASE": "Other Non-Communicable Disease"
+    "DIGESTIVE": "Digestive Disease"
+    "GENITOUTINARY": "Genitoutinary Disease"
+    "ENDROCRINE, NUTRITIONAL, AND METABOLIC DISEASE  KEYWORDS": "Endocrine, Nutritional, or Metabolic Disease" 
 }
 
 
@@ -553,7 +567,10 @@ df["NON_COMM_DISEASE"] = (
     df["CARDIOVASCULAR"] |
     df["RESPIRATORY"] |
     df["CANCER"] |
-    df["NEUROPSYCHIATRIC"]
+    df["NEUROPSYCHIATRIC"] |
+    df["DIGESTIVE"] |
+    df["GENITOUTINARY"] |
+    df["ENDROCRINE, NUTRITIONAL, AND METABOLIC DISEASE"]
 )
 
 
@@ -607,7 +624,10 @@ specific_cause_cols = [
     "RESPIRATORY",
     "CANCER",
     "NEUROPSYCHIATRIC",
-    "COVID"
+    "COVID",
+    "DIGESTIVE",
+    "GENITOUTINARY",
+    "ENDROCRINE, NUTRITIONAL, AND METABOLIC DISEASE"
 ]
 
 
@@ -1080,7 +1100,8 @@ def _contains_label(combined_col, label):
 level3_flags = [
     "COLD", "HEAT", "OVERDOSE", "SUICIDE", "HOMICIDE", "CARDIOVASCULAR",
     "RESPIRATORY", "CANCER", "NEUROPSYCHIATRIC", "COVID", "COMM_DISEASE",
-    "NON_COMM_DISEASE", "ACCIDENTAL"
+    "NON_COMM_DISEASE", "ACCIDENTAL", "DIGESTIVE", "GENITOUTINARY", "ENDROCRINE, NUTRITIONAL, AND METABOLIC DISEASE"
+}
 ]
 
 for flag in level3_flags:
@@ -1115,7 +1136,10 @@ final_column_order = [
     "EXTERNAL", "INTERNAL", "UNDETERMINED",
     "ACCIDENTAL", "INTENTIONAL", "COMM_DISEASE", "NON_COMM_DISEASE",
     "COLD", "HEAT", "OVERDOSE", "SUICIDE", "HOMICIDE", "COVID",
-    "CARDIOVASCULAR", "RESPIRATORY", "CANCER", "NEUROPSYCHIATRIC",
+    "CARDIOVASCULAR", "RESPIRATORY", "CANCER", "NEUROPSYCHIATRIC", "DIGESTIVE",
+    "GENITOUTINARY",
+    "ENDROCRINE, NUTRITIONAL, AND METABOLIC DISEASE"
+}
     "LEVEL2_GROUP_COUNT", "LEVEL2_OVERFLOW",
     "CLASS_LEVEL_1",
     "CLASS_LEVEL_2_A", "CLASS_LEVEL_3_A",
